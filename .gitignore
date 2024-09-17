@@ -1,4 +1,5 @@
 # Project files
+archives
 
 data/*
 !/data/README.md
