@@ -1,6 +1,9 @@
 import pandas as pd
 from dataclasses import dataclass
 
+from typing import Union
+
+
 @dataclass
 class DataType:
     raw_type: str
@@ -70,5 +73,34 @@ features = [
     "time_diff",
 
 ]
+
+def create_time_diff_feature(ais_train: pd.DataFrame, ais_test: pd.DataFrame) -> Union[pd.DataFrame, pd.DataFrame]:
+    # CREATE time_diff AND MAKE IT IN SECONDS
+
+    train_vessel_id_time = ais_train[["vesselId", "time"]]
+    train_vessel_id_time["split"] = "train"
+    train_vessel_id_time["ID"] = train_vessel_id_time.index
+
+    test_vessel_id_time = ais_test[["ID", "vesselId", "time" ]]
+    test_vessel_id_time["split"] = "test"
+    all_times_vesselId = pd.concat([train_vessel_id_time, test_vessel_id_time], ignore_index=True)
+
+    all_times_vesselId['time_diff'] = all_times_vesselId.sort_values(by=['vesselId', 'time']).groupby("vesselId")['time'].diff().shift(-1)
+
+    # arrival time diff (from etaRaw)
+    # all_times_vesselId['arr_time_diff'] = all_times_vesselId.sort_values(by=['vesselId', 'time']).groupby("vesselId")['time'].diff().shift(-1)
+
+    ais_test["time_diff"] = all_times_vesselId[all_times_vesselId["split"]=="test"].sort_values(by="ID").reset_index()["time_diff"]
+    ais_train["time_diff"] = all_times_vesselId[all_times_vesselId["split"]=="train"].sort_values(by="ID").reset_index()["time_diff"]
+
+    nb_dt_na_test = ais_test["time_diff"].isna().sum()
+    ais_test["time_diff"] = ais_test.sort_values(by=["time_diff"]).iloc[:-nb_dt_na_test]["time_diff"].dt.total_seconds().astype(int)
+
+    nb_dt_na_train = ais_train["time_diff"].isna().sum()
+    ais_train["time_diff"] = ais_train.sort_values(by=["time_diff"]).iloc[:-nb_dt_na_train]["time_diff"].dt.total_seconds().astype(int)
+
+    return ais_train, ais_test
+
+
 def make_features(df: pd.DataFrame) -> pd.DataFrame:
     pass 
