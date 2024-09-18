@@ -4,6 +4,7 @@ archives
 data/*
 !/data/README.md
 !/data/data.zip
+!/data/*.docx
 
 model/*
 !/model/README.md
