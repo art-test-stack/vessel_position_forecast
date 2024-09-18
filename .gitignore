@@ -3,6 +3,7 @@ archives
 
 data/*
 !/data/README.md
+!/data/data.zip
 
 model/*
 !/model/README.md
