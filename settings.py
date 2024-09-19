@@ -10,3 +10,5 @@ SCHEDULES_TO_MAY_2024 = DATA_FOLDER.joinpath("schedules_to_may_2024.csv")
 VESSELS = DATA_FOLDER.joinpath("vessels.csv")
 
 SUBMISSIONS = DATA_FOLDER.joinpath("submissions")
+
+MODEL_FOLDER = Path("models/")

@@ -21,3 +21,4 @@ def submit(forecast: pd.DataFrame, file_name: str = None) -> None:
         sample_submission.to_csv(repertory, index=False)
     except:
         print("Error register file")
+        submit(forecast)

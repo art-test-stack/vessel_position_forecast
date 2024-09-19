@@ -6,8 +6,8 @@ data/*
 !/data/data.zip
 !/data/*.docx
 
-model/*
-!/model/README.md
+models/*
+!/models/README.md
 
 submissions/*
 !/submissions/README.md
