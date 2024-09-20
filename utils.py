@@ -6,7 +6,7 @@ import uuid
 import pandas as pd
 
 def make_file_name() -> str:
-    file_name = uuid.uuid4()
+    file_name = str(uuid.uuid4())
     print(f"Submission file name is: {file_name}")
     return file_name
 
