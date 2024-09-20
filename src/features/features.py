@@ -11,96 +11,74 @@ class DataType:
     values: list
 
 
-raw_features = {
-    "time": DataType(
-        raw_type="str",
-        name="time",
-        values=["2024-01-01 00:00:25", "2024-05-07 23:59:08"]
-    ),
-    "cog": DataType(
-        raw_type=float,
-        name="Course Over Ground",
-        values=[0, 360]
-    ),
-    "sog": DataType(
-        raw_type=float,
-        name="Speed Over Ground",
-        values=[0, 102.3]
-    ),
-    "rot": DataType(
-        raw_type=int,
-        name="Rate of turn",
-        values=[-127, 128]
-    ),
-    "heading": DataType(
-        raw_type=int,
-        name="Heading",
-        values=[0, 359],
-    ),
-    "navstat": DataType(
-        raw_type=int,
-        name="Navigational Status",
-        values=[0, 15]
-    ),
-    "etaRaw": DataType(
-        raw_type=str,
-        name="Estimated Time of Arrival - Raw",
-        values=["00-00 00:00", "12-31 23:59"],
-    ),
-    "latitude": DataType(
-        raw_type=float,
-        name="Latitude",
-        values=[-90., 90.],
-    ),
-    "longitude": DataType(
-        raw_type=float,
-        name="Latitude",
-        values=[-180., 180]
-    ),
-    "vesselId": DataType(
-        raw_type=str,
-        name="vesselId",
-        values=[]
-    ),
-    "portId": DataType(
-        raw_type=str,
-        name="portId",
-        values=[]
-    )
-}
-
 features = [
     "time_diff",
 
 ]
 
-def create_time_diff_feature(ais_train: pd.DataFrame, ais_test: pd.DataFrame) -> Union[pd.DataFrame, pd.DataFrame]:
+ppfeatures = [
+    "vesselId", 
+    "time",
+    # 'time_diff',
+    'cog',
+    'sog',
+    'rot',
+    'heading',
+    # 'navstat',
+    # 'etaRaw',
+    'latitude',
+    'longitude',
+]
+
+# TODO: 
+#   - add season columns?
+#   - add hour columns?
+#   - change timestamp to sin?
+#   - pick location data? (from other datasets)
+#   - add time diff with arrival (etaRaw - time)
+
+def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     # CREATE time_diff AND MAKE IT IN SECONDS
 
-    train_vessel_id_time = ais_train[["vesselId", "time"]]
-    train_vessel_id_time["split"] = "train"
-    train_vessel_id_time["ID"] = train_vessel_id_time.index
-
-    test_vessel_id_time = ais_test[["ID", "vesselId", "time" ]]
-    test_vessel_id_time["split"] = "test"
-    all_times_vesselId = pd.concat([train_vessel_id_time, test_vessel_id_time], ignore_index=True)
-
-    all_times_vesselId['time_diff'] = all_times_vesselId.sort_values(by=['vesselId', 'time']).groupby("vesselId")['time'].diff().shift(-1)
+    df['time_diff'] = (
+        df
+        .sort_values(by=['time'])
+        .groupby("vesselId")['time']
+        .diff()
+        .dropna()
+        .dt.total_seconds()
+        .astype(int)
+        .shift(-1)
+    )
 
     # arrival time diff (from etaRaw)
-    # all_times_vesselId['arr_time_diff'] = all_times_vesselId.sort_values(by=['vesselId', 'time']).groupby("vesselId")['time'].diff().shift(-1)
+    # 
+    return df
 
-    ais_test["time_diff"] = all_times_vesselId[all_times_vesselId["split"]=="test"].sort_values(by="ID").reset_index()["time_diff"]
-    ais_train["time_diff"] = all_times_vesselId[all_times_vesselId["split"]=="train"].sort_values(by="ID").reset_index()["time_diff"]
 
-    nb_dt_na_test = ais_test["time_diff"].isna().sum()
-    ais_test["time_diff"] = ais_test.sort_values(by=["time_diff"]).iloc[:-nb_dt_na_test]["time_diff"].dt.total_seconds().astype(int)
+def presequence_data(df: pd.DataFrame, seq_len: int = 1) -> pd.DataFrame:
 
-    nb_dt_na_train = ais_train["time_diff"].isna().sum()
-    ais_train["time_diff"] = ais_train.sort_values(by=["time_diff"]).iloc[:-nb_dt_na_train]["time_diff"].dt.total_seconds().astype(int)
+    def update_split_column(group: pd.Series) -> pd.Series:
+        if group.name in df["vesselId"].unique():
+            group.iloc[-seq_len] = "both"
+        return group
 
-    return ais_train, ais_test
+    df_temp = df.copy()
+
+    ser_temp = pd.Series(
+        df_temp[df_temp["split"]=="train"]
+        .sort_values(by="time")
+        .groupby("vesselId")["split"]
+        .apply(update_split_column)
+        .reset_index(drop=True)
+    )
+    ser_temp.index = df_temp[df_temp["split"]=="train"].sort_values(["vesselId", "time"]).index
+
+    df.loc[ser_temp.index, "split"] = ser_temp
+    return df
+
 
 
 def make_features(df: pd.DataFrame) -> pd.DataFrame:
     pass 
+
