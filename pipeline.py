@@ -82,7 +82,7 @@ def main(seq_len, do_preprocess):
             test_set = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
 
         except:
-            assert False, "Do preprocessing first"
+            raise ValueError(f"File missing in {str(LAST_PREPROCESS_FOLDER)}. Run preprocessing first")
 
     dim_ffn = 2048
     d_model = 512

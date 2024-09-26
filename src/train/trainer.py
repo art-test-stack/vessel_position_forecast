@@ -93,7 +93,7 @@ class Trainer:
                 running_loss += loss.item()
 
             avg_loss = running_loss / len(train_loader)
-            print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+            # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
             if eval_on_test and val_loader:
                 val_loss = self._evaluate_nn(val_loader)
