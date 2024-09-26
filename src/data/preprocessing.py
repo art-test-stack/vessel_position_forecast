@@ -141,11 +141,11 @@ def split_train_test_sets(
 
 
 def _n_in_m_out(args):
-    vessel_id, data, features_in, features_out, seq_len_in, seq_len_out = args
+    data, features_in, features_out, seq_len_in, seq_len_out = args
     sequences = []
     targets = []
     if len(data) < seq_len_in + seq_len_out:
-        return (sequences, targets, vessel_id)
+        return (sequences, targets)
     
     for i in range(len(data) - seq_len_in - seq_len_out):
         seq = data[features_in][i:i+seq_len_in].values
@@ -153,7 +153,7 @@ def _n_in_m_out(args):
         sequences.append(seq)
         targets.append(target)
     
-    return (sequences, targets, vessel_id)
+    return (sequences, targets)
 
 def make_sequences_n_in_m_out(
         df_train: pd.DataFrame,
@@ -161,7 +161,8 @@ def make_sequences_n_in_m_out(
         features_out: List[str] = features_output,
         seq_len_in: int = 1,
         seq_len_out: int = 1,
-        verbose: bool = False,
+        parallelize: bool = False,
+        verbose: bool = False, 
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description:
@@ -181,23 +182,26 @@ def make_sequences_n_in_m_out(
     grouped = df_train.sort_values("time").groupby("vesselId")
 
     X, y = [], []
-    dropped_vessel_ids = []
-    index = []
-    args = [(vessel_id, group, features_in, features_out, seq_len_in, seq_len_out) for vessel_id, group in grouped]
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        for sequences, targets, vessel_id in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
+    args = [(group, features_in, features_out, seq_len_in, seq_len_out) for _, group in grouped]
+
+    if parallelize:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for sequences, targets in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
+                if sequences and targets:
+                    X.extend(sequences)
+                    y.extend(targets)
+    else: 
+        for arg in tqdm(args, colour="blue", disable=not verbose):
+            sequences, targets = _n_in_m_out(arg)
             if sequences and targets:
                 X.extend(sequences)
                 y.extend(targets)
-                index.append({"vessel_id": vessel_id, "min_id": len(X), "max_id": len(X) + len(sequences) - 1})
-            else:
-                dropped_vessel_ids.append(vessel_id)
 
     X = np.array(X)
     y = np.array(y)
 
-    return X, y, index, dropped_vessel_ids
+    return X, y
 
 
 def fit_and_normalize(
@@ -280,11 +284,11 @@ def preprocess(
         pass
 
     elif seq_type == "n_in_1_out":
-        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose)
+        X, y = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose)
 
     elif seq_type == "n_in_m_out":
         assert type(seq_len_out) == int, "`seq_len_out` parameter must be an integer (int)"
-        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose)
+        X, y = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose)
     
     print("Split training and validation sets...")
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
