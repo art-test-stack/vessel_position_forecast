@@ -1,7 +1,7 @@
 import pandas as pd
 from dataclasses import dataclass
 
-from typing import Union
+from typing import Union, List
 
 
 @dataclass
@@ -39,33 +39,61 @@ ppfeatures = [
 
 def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     """
-    CREATE time_diff AND MAKE IT IN SECONDS
-    
+    Description:
+
+    CREATE `time_diff` AND MAKE IT IN SECONDS
+
     input:
-        - ais_data: pd.DataFrame = ais_train and ais_test concatenated
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+    output:
+        - ais_data: pd.DataFrame = ais_data with `time_diff` feature
     """
 
     df['time_diff'] = (
         df
         .sort_values(by=['time'])
         .groupby("vesselId")['time']
-        .diff()
+        .diff(-1)
+        .abs()
         .dropna()
         .dt.total_seconds()
         .astype(int)
-        .shift(-1)
     )
-
-    # arrival time diff (from etaRaw)
-    # 
+    ## OLD ONE:
+    #     (
+    #     ais_data
+    #     .sort_values(by=['time'])
+    #     .groupby("vesselId")['time']
+    #     .diff()
+    #     .abs()
+    #     .dropna()
+    #     .dt.total_seconds()
+    #     .astype(int)
+    #     .shift(-1)
+    # )
     return df
 
 
-def presequence_data(df: pd.DataFrame, seq_len: int = 1) -> pd.DataFrame:
+def presequence_data(
+        df: pd.DataFrame, 
+        vessel_ids: List[str],
+        seq_len: int = 1
+    ) -> pd.DataFrame:
+    """
+    Description:
+
+    UPDATE `split` LABEL FOR SAMPLES NEEDED FOR BOTH training AND test
+    
+    input:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+        - seq_len: int = length of the sequences
+    output:
+        - ais_data: pd.DataFrame = ais_data with updated `split` label
+    """
 
     def update_split_column(group: pd.Series) -> pd.Series:
-        if group.name in df["vesselId"].unique():
-            group.iloc[-seq_len] = "both"
+        if group.name in vessel_ids:
+            group.iloc[-seq_len:] = "both"
         return group
 
     df_temp = df.copy()
@@ -83,7 +111,5 @@ def presequence_data(df: pd.DataFrame, seq_len: int = 1) -> pd.DataFrame:
     return df
 
 
-
 def make_features(df: pd.DataFrame) -> pd.DataFrame:
     pass 
-
