@@ -197,24 +197,16 @@ def make_sequences_n_in_m_out(
 
     if parallelize:
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            for sequences, targets, vessel_id in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
-            #     if sequences and targets:
-            #         X.extend(sequences)
-            #         y.extend(targets)
-            #         index.append({"vessel_id": vessel_id, "min_id": len(X), "max_id": len(X) + len(sequences) - 1})
-            #     else:
-            #         dropped_vessel_ids.append(vessel_id)
+            for sequences, targets, vessel_id in tqdm(
+                executor.map(_n_in_m_out, args), 
+                total=len(args), colour="blue", 
+                disable=not verbose
+            ):
                 _loop(sequences, targets, vessel_id)
 
     else: 
         for arg in tqdm(args, colour="blue", disable=not verbose):
             sequences, targets, vessel_id = _n_in_m_out(arg)
-            # if sequences and targets:
-            #     X.extend(sequences)
-            #     y.extend(targets)
-            #     index.append({"vessel_id": vessel_id, "min_id": len(X), "max_id": len(X) + len(sequences) - 1})
-            # else:
-            #     dropped_vessel_ids.append(vessel_id)
             _loop(sequences, targets, vessel_id)
 
     X = np.array(X)
