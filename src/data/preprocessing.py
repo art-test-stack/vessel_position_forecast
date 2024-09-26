@@ -7,6 +7,7 @@ import torch
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from typing import Any, Union, List, Tuple
 from tqdm import tqdm
@@ -161,7 +162,7 @@ def make_sequences_n_in_m_out(
         seq_len_in: int = 1,
         seq_len_out: int = 1,
         verbose: bool = False,
-    ) -> Any:
+    ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description:
         Generates sequences from ais_train
@@ -211,6 +212,7 @@ def preprocess(
         seq_type: str = "basic",
         seq_len: int = 1,
         seq_len_out: int | None = 1,
+        normalize: bool = True,
         verbose: bool = False,
         to_torch: bool = False
     ) -> None:
@@ -219,11 +221,18 @@ def preprocess(
         PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
 
     Input:
-        -
-        -
-        -
+        df_train: Training dataframe
+        df_test: Test dataframe
+        features_raw: List of raw features to include
+        seq_type: Type of sequence for data processing
+        seq_len: Length of input sequence
+        seq_len_out: Length of output sequence
+        verbose: Whether to print out information during processing
+        to_torch: Convert to PyTorch tensors
+        normalize: Whether to normalize the data using z-score
+
     Output:
-        -
+        Preprocessed data ready for training and testing.
     """
     # PUT asserts HERE
     assert seq_type in seq_types, "This type of sequence is not handdled yet"
@@ -248,10 +257,16 @@ def preprocess(
     df = create_time_diff_feature(df)
 
 
-    # SPLIT DATA
+    # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
 
     train_set, test_set = split_train_test_sets(df)
+
+    # TODO: Look for better way to normalize
+    if normalize: 
+        scaler = StandardScaler()
+        train_set[features_input] = scaler.fit_transform(train_set[features_input])
+        test_set[features_input] = scaler.fit(test_set[features_input])
     # train_set = train_set.dropna(subset="time_diff")
 
     # MAKE SEQUENCE
@@ -272,3 +287,6 @@ def preprocess(
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)
 
     print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
+    print(X_train.mean())
+
+    return X_train, X_val, y_train, y_val, test_set, scaler
