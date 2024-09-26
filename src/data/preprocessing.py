@@ -1,4 +1,4 @@
-from features import *
+from src.features import *
 import pandas as pd
 
 

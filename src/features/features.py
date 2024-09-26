@@ -38,7 +38,12 @@ ppfeatures = [
 #   - add time diff with arrival (etaRaw - time)
 
 def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
-    # CREATE time_diff AND MAKE IT IN SECONDS
+    """
+    CREATE time_diff AND MAKE IT IN SECONDS
+    
+    input:
+        - ais_data: pd.DataFrame = ais_train and ais_test concatenated
+    """
 
     df['time_diff'] = (
         df

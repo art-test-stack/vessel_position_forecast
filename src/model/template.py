@@ -25,7 +25,7 @@ def create_sequences(data, sequence_length):
         seq = data[i:i+sequence_length].values
         target = data[i+sequence_length].values
         sequences.append(seq)
-        targets.append(target)
+        target Ss.append(target)
     return sequences, targets
 
 sequence_length = 10  # or any desired sequence length
