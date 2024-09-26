@@ -7,6 +7,7 @@ from src.train.trainer import Trainer
 
 import pandas as pd
 import numpy as np
+from sklearn.externals import joblib
 
 import torch
 from torch import nn
@@ -36,24 +37,53 @@ def iterative_forecast(seq, model, steps, sequence_length):
     return predicted
 
 
-def main(seq_len, ):
+def main(seq_len, do_preprocess):
     # OPEN NEEDED `*.csv` files
-    ais_train = pd.read_csv(AIS_TRAIN, sep='|')
-    ais_train['time'] = pd.to_datetime(ais_train['time'])
+    if do_preprocess:
+        ais_train = pd.read_csv(AIS_TRAIN, sep='|')
+        ais_train['time'] = pd.to_datetime(ais_train['time'])
 
-    ais_test = pd.read_csv(AIS_TEST, sep=",")
-    ais_test['time'] = pd.to_datetime(ais_test['time']) 
+        ais_test = pd.read_csv(AIS_TEST, sep=",")
+        ais_test['time'] = pd.to_datetime(ais_test['time']) 
 
-    X_train, X_val, y_train, y_val, test_set, scaler = preprocess(
-        ais_train, 
-        ais_test,
-        seq_type="n_in_1_out",
-        seq_len=seq_len,
-        seq_len_out=1,
-        verbose=True,
-        to_torch=True
-    )
+        X_train, X_val, y_train, y_val, test_set, scaler = preprocess(
+            ais_train, 
+            ais_test,
+            seq_type="n_in_1_out",
+            seq_len=seq_len,
+            seq_len_out=1,
+            verbose=True,
+            to_torch=True
+        )
+
+        X_train = torch.Tensor(X_train)
+        y_train = torch.Tensor(y_train)
+
+        X_val = torch.Tensor(X_val)
+        y_val = torch.Tensor(y_val)
+
+        torch.save(X_train, LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"))
+        torch.save(y_train, LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"))
+        torch.save(X_val, LAST_PREPROCESS_FOLDER.joinpath("X_val.pt"))
+        torch.save(y_val, LAST_PREPROCESS_FOLDER.joinpath("y_val.pt"))
+
+        joblib.dump(scaler, LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
+        test_set.to_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
     
+    else:
+        try:
+            
+            X_train = torch.load(LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"), weights_only=True)
+            y_train = torch.load(LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"), weights_only=True)
+            X_val = torch.load(LAST_PREPROCESS_FOLDER.joinpath("X_val.pt"), weights_only=True)
+            y_val = torch.load(LAST_PREPROCESS_FOLDER.joinpath("y_val.pt"), weights_only=True)
+
+            scaler = joblib.load(LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
+            test_set = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
+
+        except:
+            assert False, "Do preprocessing first"
+
     dim_ffn = 2048
     d_model = 512
     transformer_decoder_params = {
@@ -103,6 +133,7 @@ def main(seq_len, ):
         device=DEVICE
     )
 
+
     X_train = torch.Tensor(X_train).to(DEVICE)
     y_train = torch.Tensor(y_train).to(DEVICE)
 
@@ -110,11 +141,11 @@ def main(seq_len, ):
     y_val = torch.Tensor(y_val).to(DEVICE)
 
     trainer.fit(
-        X_train=X_train,
-        y_train=y_train,
-        X_val=X_val,
-        y_val=y_val,
-        epochs=1,
+        X=X_train,
+        y=y_train,
+        # X_val=X_val,
+        # y_val=y_val,
+        epochs=500,
         eval_on_test=True
     )
 
@@ -182,5 +213,5 @@ def main(seq_len, ):
 
 if __name__ == "__main__":
     seq_len = 48
-
-    main(seq_len)
+    do_preprocess = True
+    main(seq_len, do_preprocess)

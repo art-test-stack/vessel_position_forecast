@@ -19,6 +19,7 @@ MODEL_FOLDER = Path("models/")
 
 SUBMISSION_FODLER = Path("submissions/")
 
+LAST_PREPROCESS_FOLDER = DATA_FOLDER.joinpath("last_preprocess/")
 # ----------- PROCESSOR -----------
 
 CUDA_AVAILABLE = torch.cuda.is_available()

@@ -11,6 +11,8 @@ models/*
 
 submissions/*
 !/submissions/README.md
+
+jobs/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,6 +1,6 @@
 import torch
 import xgboost as xgb
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, GridSearchCV, RandomizedSearchCV
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 

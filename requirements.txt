@@ -1,0 +1,10 @@
+pandas
+torch
+numpy
+tqdm
+scikit-learn
+geopy
+xgboost
+matplotlib
+plotly
+twine==5.0.0

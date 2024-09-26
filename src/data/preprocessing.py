@@ -161,7 +161,8 @@ def make_sequences_n_in_m_out(
         features_out: List[str] = features_output,
         seq_len_in: int = 1,
         seq_len_out: int = 1,
-        verbose: bool = False,
+        parallelize: bool = False,
+        verbose: bool = False, 
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Description:
@@ -184,8 +185,15 @@ def make_sequences_n_in_m_out(
 
     args = [(group, features_in, features_out, seq_len_in, seq_len_out) for _, group in grouped]
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        for sequences, targets in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
+    if parallelize:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for sequences, targets in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
+                if sequences and targets:
+                    X.extend(sequences)
+                    y.extend(targets)
+    else: 
+        for arg in tqdm(args, colour="blue", disable=not verbose):
+            sequences, targets = _n_in_m_out(arg)
             if sequences and targets:
                 X.extend(sequences)
                 y.extend(targets)
