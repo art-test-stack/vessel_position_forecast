@@ -1,8 +1,15 @@
 from src.data.features import create_time_diff_feature, presequence_data
+
+import concurrent.futures
+
+import torch
+
+import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from typing import Any, Union, List, Tuple
-
+from tqdm import tqdm
 
 features_raw_ais_data = [
     "vesselId", 
@@ -14,6 +21,28 @@ features_raw_ais_data = [
     'latitude',
     'longitude',
 ]
+
+features_input = [
+    'time_diff',
+    'cog',
+    'sog',
+    'rot',
+    'heading',
+    'latitude',
+    'longitude',
+]
+
+features_output = [
+    # 'time_diff',
+    'cog',
+    'sog',
+    'rot',
+    'heading',
+    'latitude',
+    'longitude',
+]
+
+seq_types = ["basic", "n_in_1_out", "n_in_m_out"]
 
 
 def concat_train_test_sets(
@@ -50,8 +79,7 @@ def split_train_test_sets(
     ) -> Tuple[pd.DataFrame,pd.DataFrame]:
     """
     Description:
-
-    SPLIT `ais_data` INTO `ais_train` AND `ais_test`
+        SPLIT `ais_data` INTO `ais_train` AND `ais_test`
     
     Input:
         - df: pd.DataFrame = ais_data
@@ -61,9 +89,110 @@ def split_train_test_sets(
     """
     data_train = df[(df["split"]=="train")|(df["split"]=="both")]
     data_test = df[(df["split"]=="test")|(df["split"]=="both")]
-    data_train.dropna(subset="time_diff")
+    # data_train.dropna(subset="time_diff")
 
     return data_train, data_test
+
+
+# def make_sequences_n_in_1_out(
+#         df_train: pd.DataFrame,
+#         features_in: List[str] = features_input,
+#         features_out: List[str] = features_output,
+#         seq_len: int = 1,
+#         to_torch: bool = False
+#     ) -> Any:
+#     """
+#     Description:
+#         ...
+    
+#     Input:
+#         - df_train: pd.DataFrame = ais_train
+#         - ...
+#     Output:
+#         - ...
+#     """
+
+#     grouped = df_train.sort_values("time").groupby("vesselId")
+
+#     def _n_in_1_out(data, sequence_length):
+#         sequences = []
+#         # targets = []
+#         for i in range(len(data) - sequence_length):
+#             seq = data[i:i+sequence_length].values
+#             # target = data[features_in].iloc[i+sequence_length].values
+#             sequences.append(seq)
+#             # targets.append(target)
+#         return sequences # , targets
+
+#     X, y = [], []
+
+#     for _, group in grouped:
+#         X_raw = group[features_in].iloc[:-1]
+#         y_raw = group[features_out].iloc[seq_len:]
+
+#         sequences = _n_in_1_out(X_raw, seq_len)
+#         # sequences, targets = _n_in_1_out(X_raw, seq_len)
+#         X.extend(sequences)
+#         y.extend(y_raw)
+
+#     X = torch.Tensor(X) if to_torch else np.array(X)
+#     y = torch.Tensor(y) if to_torch else np.array(y)
+
+
+def _n_in_m_out(args):
+    data, features_in, features_out, seq_len_in, seq_len_out = args
+    sequences = []
+    targets = []
+    if len(data) < seq_len_in + seq_len_out:
+        return (sequences, targets)
+    
+    for i in range(len(data) - seq_len_in - seq_len_out):
+        seq = data[features_in][i:i+seq_len_in].values
+        target = data[features_out].iloc[i+seq_len_in:i+seq_len_in+seq_len_out].values
+        sequences.append(seq)
+        targets.append(target)
+    
+    return (sequences, targets)
+
+def make_sequences_n_in_m_out(
+        df_train: pd.DataFrame,
+        features_in: List[str] = features_input,
+        features_out: List[str] = features_output,
+        seq_len_in: int = 1,
+        seq_len_out: int = 1,
+        verbose: bool = False,
+    ) -> Any:
+    """
+    Description:
+        Generates sequences from ais_train
+    
+    Input:
+        - df_train: pd.DataFrame = ais_train
+        - features_in: List of feature names used as input.
+        - features_out: List of feature names used as output.
+        - seq_len_in: Length of the input sequence.
+        - seq_len_out: Length of the output sequence.
+        - to_torch: Whether to convert the output to torch Tensors.
+    Output:
+        - X: Input sequences.
+        - y: Output targets.
+    """
+    grouped = df_train.sort_values("time").groupby("vesselId")
+
+    X, y = [], []
+
+    args = [(group, features_in, features_out, seq_len_in, seq_len_out) for _, group in grouped]
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for sequences, targets in tqdm(executor.map(_n_in_m_out, args), total=len(args), colour="blue", disable=not verbose):
+            if sequences and targets:
+                X.extend(sequences)
+                y.extend(targets)
+
+    X = np.array(X)
+    y = np.array(y)
+
+    return X, y
 
 
 def fit_and_normalize(
@@ -75,20 +204,19 @@ def fit_and_normalize(
     pass
 
 
-seq_types = ["basic", "n_in_1_out"]
-
-
 def preprocess(
         df_train: pd.DataFrame, 
         df_test: pd.DataFrame,
         features_raw: List[str] = features_raw_ais_data,
         seq_type: str = "basic",
         seq_len: int = 1,
-        verbose: bool = False
+        seq_len_out: int | None = 1,
+        verbose: bool = False,
+        to_torch: bool = False
     ) -> None:
     """
     Description:
-
+        PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
 
     Input:
         -
@@ -124,14 +252,23 @@ def preprocess(
     df = presequence_data(df, test_vessel_ids, seq_len)
 
     train_set, test_set = split_train_test_sets(df)
-    train_set = train_set.dropna(subset="time_diff")
-
+    # train_set = train_set.dropna(subset="time_diff")
 
     # MAKE SEQUENCE
+    if verbose:
+        print(f"Create training sequences on mode '{seq_type}'...")
     if seq_type == "basic":
         pass
 
     elif seq_type == "n_in_1_out":
-        pass
+        X, y = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose)
 
+    elif seq_type == "n_in_m_out":
+        assert type(seq_len_out) == int, "`seq_len_out` parameter must be an integer (int)"
+        X, y = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose)
     
+    print("Split training and validation sets...")
+    # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)
+
+    print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
