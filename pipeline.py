@@ -84,8 +84,8 @@ def main(seq_len, do_preprocess):
         except:
             raise ValueError(f"File missing in {str(LAST_PREPROCESS_FOLDER)}. Run preprocessing first")
 
-    dim_ffn = 2048
-    d_model = 512
+    dim_ffn = 258
+    d_model = 64
     transformer_decoder_params = {
         "d_model": d_model,
         "nhead": 8,
@@ -114,7 +114,7 @@ def main(seq_len, do_preprocess):
             self.emb_layer = nn.Linear(num_features, d_model)
             dec_layer = nn.TransformerDecoderLayer(**decoder_params)
             self.model = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
-            self.ffn = nn.Linear(dim_ffn, num_outputs)
+            self.ffn = nn.Linear(d_model, num_outputs)
             self.act_out = act_out # nn.Sigmoid()
             
         def forward(self, x):
@@ -213,5 +213,5 @@ def main(seq_len, do_preprocess):
 
 if __name__ == "__main__":
     seq_len = 48
-    do_preprocess = True
+    do_preprocess = False
     main(seq_len, do_preprocess)
