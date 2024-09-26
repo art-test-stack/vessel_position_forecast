@@ -1,5 +1,10 @@
 from pathlib import Path
 
+import torch
+import os
+
+# ----------- DATA -----------
+
 DATA_FOLDER = Path("data/")
 
 AIS_SAMPLE_SUBMISSION = DATA_FOLDER.joinpath("ais_sample_submission.csv")
@@ -13,3 +18,15 @@ VESSELS = DATA_FOLDER.joinpath("vessels.csv")
 MODEL_FOLDER = Path("models/")
 
 SUBMISSION_FODLER = Path("submissions/")
+
+# ----------- PROCESSOR -----------
+
+CUDA_AVAILABLE = torch.cuda.is_available()
+MPS_AVAILABLE = torch.backends.mps.is_available()
+if MPS_AVAILABLE:
+    torch.mps.empty_cache()
+    torch.mps.set_per_process_memory_fraction(0.)
+DEVICE_NAME = "cuda" if CUDA_AVAILABLE else "mps" if MPS_AVAILABLE else "cpu"
+DEVICE = torch.device(DEVICE_NAME)
+
+NUM_THREADS = os.cpu_count() # 16
