@@ -7,7 +7,7 @@ from src.train.trainer import Trainer
 
 import pandas as pd
 import numpy as np
-from sklearn.externals import joblib
+import joblib
 
 import torch
 from torch import nn
