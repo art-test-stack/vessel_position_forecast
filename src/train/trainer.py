@@ -4,8 +4,18 @@ from sklearn.model_selection import KFold, GridSearchCV, RandomizedSearchCV
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
+from tqdm import tqdm
+
 class Trainer:
-    def __init__(self, model, loss=None, metric=None, optimizer=None, device='cpu', batch_size=256):
+    def __init__(
+            self, 
+            model, 
+            loss=None, 
+            metric=None, 
+            optimizer=None, 
+            device: str = 'cpu', 
+            batch_size: int = 256
+        ):
         """
         Initialize the trainer.
         Args:
@@ -78,7 +88,7 @@ class Trainer:
             epochs: Number of epochs for training
             eval_on_test: Whether to evaluate during training
         """
-        for epoch in range(epochs):
+        for epoch in tqdm(range(epochs), colour="red"):
             self.model.train()
             running_loss = 0.0
             for inputs, targets in train_loader:

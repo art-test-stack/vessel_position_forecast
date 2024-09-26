@@ -120,6 +120,8 @@ def main(seq_len, do_preprocess):
         def forward(self, x):
             emb = self.emb_layer(x)
             out = self.model(emb, emb)
+            out = out[:, -1, :]
+            
             if self.act_out:
                 return self.act_out(self.ffn(out))
             return self.ffn(out)
