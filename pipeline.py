@@ -147,7 +147,7 @@ def main(seq_len, do_preprocess):
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=500,
+        epochs=700,
         eval_on_test=True
     )
 

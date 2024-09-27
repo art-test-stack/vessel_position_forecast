@@ -34,7 +34,7 @@ def iterative_forecast(seq, model, steps, sequence_length):
         seq[seq_len+k] = np.array([seq[k+1][0], *y_pred])
         
         current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,7)
-    print(np.array(predicted).shape)
+        
     return predicted
 
 
@@ -166,7 +166,10 @@ def main(seq_len, do_preprocess):
     try:
         print("Score on validation set (rmse):", np.sqrt(score))
     except:
-        print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy()))
+        try:
+            print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy()))
+        except:
+            print("Score ???")
 
     
     # PREDICTION STEP
