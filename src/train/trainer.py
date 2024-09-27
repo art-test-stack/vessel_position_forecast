@@ -1,20 +1,26 @@
 import torch
+from torch import nn
+
 import xgboost as xgb
+
 from sklearn.model_selection import KFold, GridSearchCV, RandomizedSearchCV
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
 from tqdm import tqdm
 
+from typing import Callable, Tuple
+from copy import deepcopy
+
 class Trainer:
     def __init__(
             self, 
-            model, 
-            loss=None, 
-            metric=None, 
-            optimizer=None, 
-            device: str = 'cpu', 
-            batch_size: int = 256
+            model: nn.Module, # TODO: Handdle XGBoost models
+            loss: nn.Module = nn.MSELoss(), 
+            metric = None, 
+            optimizer: torch.optim.Optimizer | None = None, 
+            device: str | torch.device = 'cpu', 
+            batch_size: int = 1024
         ):
         """
         Initialize the trainer.
@@ -29,14 +35,21 @@ class Trainer:
         self.model = model
         self.loss = loss
         self.metric = metric or loss
-        self.optimizer = optimizer
+        self.optimizer = optimizer or torch.optim.AdamW(params=model.parameters())
         self.device = device
         self.best_model = None
         self.best_score = None
         self.batch_size = batch_size  # Add batch size for mini-batch training
         self.model.to(device)
 
-    def fit(self, X, y, k_folds=5, epochs=10, eval_on_test=False):
+    def fit(
+            self, 
+            X: torch.Tensor | np.ndarray, 
+            y: torch.Tensor | np.ndarray, 
+            k_folds: int = 5, 
+            epochs: int = 10, 
+            eval_on_test: bool = False
+        ):
         """
         Fit the model using k-fold cross-validation with mini-batch training.
         Args:
@@ -46,40 +59,73 @@ class Trainer:
             epochs: Number of epochs (for neural networks)
             eval_on_test: Whether to evaluate on the validation set during training
         """
-        kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
 
-        fold_idx = 0
-        for train_idx, val_idx in kfold.split(X, y):
-            print(f"Training fold {fold_idx + 1}/{k_folds}...")
-            X_train, y_train = X[train_idx], y[train_idx]
-            X_val, y_val = X[val_idx], y[val_idx]
+        if not isinstance(X, torch.Tensor):
+            X = torch.tensor(X, dtype=torch.float32).to(self.device)
+        
+        if not isinstance(y, torch.Tensor):
+            y = torch.tensor(y, dtype=torch.float32).to(self.device)
 
-            if isinstance(self.model, xgb.XGBModel):
-                # Train XGBoost model using batch mode
-                self.model.fit(X_train, y_train, eval_set=[(X_val, y_val)] if eval_on_test else None)
-                if eval_on_test:
-                    y_pred = self.model.predict(X_val)
-                    score = self.metric(y_val, y_pred)
-                    self._update_best_model(score)
+        if k_folds > 1:
 
-            elif isinstance(self.model, torch.nn.Module):
-                # Create DataLoader for mini-batch training
-                train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), 
-                                              torch.tensor(y_train, dtype=torch.float32))
-                train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+            kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
 
-                if eval_on_test:
-                    val_dataset = TensorDataset(torch.tensor(X_val, dtype=torch.float32), 
-                                                torch.tensor(y_val, dtype=torch.float32))
-                    val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
-                else:
-                    val_loader = None
+            fold_idx = 0
+            models = [ deepcopy(self.model)for _ in range(k_folds) ]
+            
 
+            for train_idx, val_idx in kfold.split(X, y):
+                print(f"Training fold {fold_idx + 1}/{k_folds}...")
+                print("train_idx:", train_idx) # TODO: remove
+
+                self.model = models[fold_idx]
+                self.optimizer = torch.optim.AdamW(params=self.model.parameters())
+                X_train, y_train = X[train_idx], y[train_idx]
+                X_val, y_val = X[val_idx], y[val_idx]
+
+                train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
                 self._train_nn(train_loader, val_loader, epochs, eval_on_test)
 
-            fold_idx += 1
+                fold_idx += 1
 
-    def _train_nn(self, train_loader, val_loader=None, epochs=10, eval_on_test=False):
+        else: 
+            # TODO: Random split
+            idx = int(len(X) * .9) if eval_on_test else len(X) - 1
+            X_train, y_train = X[:idx], y[:idx]
+            X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
+            
+            train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
+            self._train_nn(train_loader, val_loader, epochs, eval_on_test)
+
+    def _prepare_dataloaders(
+            self,
+            X_train: torch.Tensor,
+            y_train: torch.Tensor,
+            X_val: torch.Tensor | None,
+            y_val: torch.Tensor | None,
+            eval_on_test: bool = False,
+        ) -> Tuple[DataLoader, DataLoader]:
+
+        train_dataset = TensorDataset(X_train, y_train)
+
+        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+
+        if eval_on_test:
+            val_dataset = TensorDataset(X_val, y_val)
+            val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
+        else:
+            val_loader = None
+        
+        return train_loader, val_loader
+
+
+    def _train_nn(
+            self, 
+            train_loader: DataLoader, 
+            val_loader: DataLoader | None = None, 
+            epochs: int = 10, 
+            eval_on_test: bool = False
+        ):
         """
         Train the neural network model with mini-batch gradient descent.
         Args:
@@ -102,12 +148,16 @@ class Trainer:
 
                 running_loss += loss.item()
 
-            avg_loss = running_loss / len(train_loader)
+            # avg_loss = running_loss / len(train_loader)
             # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
             if eval_on_test and val_loader:
                 val_loss = self._evaluate_nn(val_loader)
                 self._update_best_model(val_loss)
+            
+        if eval_on_test:
+            print(f"Best model on val score: {self.best_score}")
+            
 
     def _evaluate_nn(self, val_loader):
         """Evaluate the neural network on validation data using mini-batches."""
@@ -121,14 +171,14 @@ class Trainer:
                 running_val_loss += loss.item()
 
         avg_val_loss = running_val_loss / len(val_loader)
-        print(f"Validation Loss: {avg_val_loss:.4f}")
+        # print(f"Validation Loss: {avg_val_loss:.4f}")
         return avg_val_loss
 
     def _update_best_model(self, score):
         """Update the best model based on validation score."""
         if self.best_score is None or score < self.best_score:
             self.best_score = score
-            self.best_model = self.model
+            self.best_model = deepcopy(self.model)
 
     def find_hyperparameters(self, X_train, y_train, param_grid, search_method="grid", k_folds=5):
         """
@@ -151,31 +201,52 @@ class Trainer:
         self.model = search.best_estimator_
         print(f"Best hyperparameters: {search.best_params_}")
 
-    def predict(self, X, initial_input=None, prediction_strategy='n_in_1_out', sequence_length=None):
+
+    def predict(self, X, pred_strat='n_in_1_out', seq_len=None):
         """
         Make predictions using the model.
         Args:
             X: Input features
             initial_input: For sequential models, first input to start the prediction
-            prediction_strategy: Prediction method ('n_in_1_out', 'n_in_m_out', 'n_in_n_out')
-            sequence_length: Sequence length for sequential models (if applicable)
+            pred_strat: Prediction method ('n_in_1_out', 'n_in_m_out', 'n_in_n_out')
+            seq_len: Sequence length for sequential models (if applicable)
         """
-        if isinstance(self.model, xgb.XGBModel):
-            return self.model.predict(X)
-        elif isinstance(self.model, torch.nn.Module):
-            X = torch.tensor(X).to(self.device)
-            self.model.eval()
-            with torch.no_grad():
-                if prediction_strategy == 'n_in_1_out':
-                    return self._n_in_1_out(X)
-                elif prediction_strategy == 'n_in_m_out':
-                    return self._n_in_m_out(X, sequence_length)
-                elif prediction_strategy == 'n_in_n_out':
-                    return self._n_in_n_out(X, sequence_length)
-                else:
-                    raise ValueError(f"Unknown prediction strategy: {prediction_strategy}")
-        else:
-            raise NotImplementedError("Unsupported model type for prediction.")
+        if not isinstance(X, torch.Tensor):
+            X = torch.tensor(X, dtype=torch.float32).to(self.device)
+
+        if len(X.shape) > 2 and X.shape[0] > 1:
+            dataset = TensorDataset(X)
+            dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+
+            y_pred = []
+            for x, in dataloader:
+                y_pred.append(self._predict(x, pred_strat=pred_strat, seq_len=seq_len))
+            y_pred = np.concatenate(y_pred)
+
+        else: 
+            y_pred = self._predict(X, pred_strat=pred_strat, seq_len=seq_len)
+
+        return y_pred
+
+    def _predict(
+            self, 
+            x: torch.Tensor, 
+            pred_strat: str = 'n_in_1_out', 
+            seq_len: bool = None
+        ):
+        self.model.eval()
+        with torch.no_grad():
+            # if pred_strat == 'n_in_1_out':
+            #     return self._n_in_1_out(x)
+            # elif pred_strat == 'n_in_m_out':
+            #     return self._n_in_m_out(x, seq_len)
+            # elif pred_strat == 'n_in_n_out':
+            #     return self._n_in_n_out(x, seq_len)
+            # else:
+            #     raise ValueError(f"Unknown prediction strategy: {pred_strat}")
+
+            return self.model(x).cpu().numpy()
+
 
     def _n_in_1_out(self, X):
         # Example implementation for 'n in, 1 out' strategy
@@ -185,16 +256,16 @@ class Trainer:
             predictions.append(output.cpu().numpy())
         return np.concatenate(predictions)
 
-    def _n_in_m_out(self, X, sequence_length):
+    def _n_in_m_out(self, X, seq_len):
         # Example implementation for 'n in, m out' strategy
-        outputs = self.model(X[:, :sequence_length])
+        outputs = self.model(X[:, :seq_len])
         return outputs.cpu().numpy()
 
-    def _n_in_n_out(self, X, sequence_length):
+    def _n_in_n_out(self, X, seq_len):
         # Example implementation for 'n in, n out' strategy
         predictions = []
-        for i in range(0, X.size(1) - sequence_length + 1):
-            output = self.model(X[:, i:i+sequence_length])
+        for i in range(0, X.size(1) - seq_len + 1):
+            output = self.model(X[:, i:i+seq_len])
             predictions.append(output.cpu().numpy())
         return np.concatenate(predictions, axis=1)
 
@@ -202,8 +273,20 @@ class Trainer:
         """
         Evaluate the model on test data.
         Args:
-            X_test: Test features
-            y_test: Test labels
+            X_test: Test samples
+            y_test: Test targets
         """
         y_pred = self.predict(X_test)
+        y_pred = torch.Tensor(y_pred).to(self.device)
         return self.metric(y_test, y_pred)
+    
+
+
+# TODO: Handle XGBoost
+# if isinstance(self.model, xgb.XGBModel):
+#     # Train XGBoost model using batch mode
+#     self.model.fit(X_train, y_train, eval_set=[(X_val, y_val)] if eval_on_test else None)
+#     if eval_on_test:
+#         y_pred = self.model.predict(X_val)
+#         score = self.metric(y_val, y_pred)
+#         self._update_best_model(score)

@@ -232,8 +232,10 @@ def preprocess(
         seq_len: int = 1,
         seq_len_out: int | None = 1,
         normalize: bool = True,
+        scaler = StandardScaler(),
         verbose: bool = False,
-        to_torch: bool = False
+        to_torch: bool = False,
+        parallelize_seq: bool = False,
     ) -> None:
     """
     Description:
@@ -283,9 +285,8 @@ def preprocess(
 
     # TODO: Look for better way to normalize
     if normalize: 
-        scaler = StandardScaler()
         train_set[features_input] = scaler.fit_transform(train_set[features_input])
-        test_set[features_input] = scaler.fit(test_set[features_input])
+        test_set[features_input] = scaler.transform(test_set[features_input])
     # train_set = train_set.dropna(subset="time_diff")
 
     # MAKE SEQUENCE
@@ -295,11 +296,11 @@ def preprocess(
         pass
 
     elif seq_type == "n_in_1_out":
-        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose)
+        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose, parallelize=parallelize_seq)
 
     elif seq_type == "n_in_m_out":
         assert type(seq_len_out) == int, "`seq_len_out` parameter must be an integer (int)"
-        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose)
+        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose, parallelize=parallelize_seq)
     
     print("Split training and validation sets...")
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
