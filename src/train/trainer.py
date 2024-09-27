@@ -23,7 +23,9 @@ class Trainer:
             batch_size: int = 1024
         ):
         """
-        Initialize the trainer.
+        Description:
+
+            Initialize the trainer.
         Args:
             model: The model to be trained (XGBoost, torch.nn.Module, etc.)
             loss: Loss function for neural network models
@@ -51,7 +53,10 @@ class Trainer:
             eval_on_test: bool = False
         ):
         """
-        Fit the model using k-fold cross-validation with mini-batch training.
+        Description:
+
+            Fit the model using k-fold cross-validation with mini-batch training.
+        
         Args:
             X: Features (input data)
             y: Labels (target data)
@@ -127,7 +132,9 @@ class Trainer:
             eval_on_test: bool = False
         ):
         """
-        Train the neural network model with mini-batch gradient descent.
+        Description:
+
+            Train the neural network model with mini-batch gradient descent.
         Args:
             train_loader: DataLoader for training data
             val_loader: DataLoader for validation data (if applicable)
@@ -160,7 +167,14 @@ class Trainer:
             
 
     def _evaluate_nn(self, val_loader):
-        """Evaluate the neural network on validation data using mini-batches."""
+        """
+        Description:
+
+            Evaluate the neural network on validation data using mini-batches.
+        
+        Args:
+
+        """
         self.model.eval()
         running_val_loss = 0.0
         with torch.no_grad():
@@ -175,14 +189,20 @@ class Trainer:
         return avg_val_loss
 
     def _update_best_model(self, score):
-        """Update the best model based on validation score."""
+        """
+        Description:
+
+            Update the best model based on validation score.
+        """
         if self.best_score is None or score < self.best_score:
             self.best_score = score
             self.best_model = deepcopy(self.model)
 
     def find_hyperparameters(self, X_train, y_train, param_grid, search_method="grid", k_folds=5):
         """
-        Perform hyperparameter search on the model.
+        Description:
+
+            Perform hyperparameter search on the model.
         Args:
             X_train: Training features
             y_train: Training labels
@@ -204,7 +224,9 @@ class Trainer:
 
     def predict(self, X, pred_strat='n_in_1_out', seq_len=None):
         """
-        Make predictions using the model.
+        Description:
+
+            Make predictions using the model.
         Args:
             X: Input features
             initial_input: For sequential models, first input to start the prediction
@@ -234,6 +256,12 @@ class Trainer:
             pred_strat: str = 'n_in_1_out', 
             seq_len: bool = None
         ):
+        """
+        Description:
+
+        Args:
+            - 
+        """
         self.model.eval()
         with torch.no_grad():
             # if pred_strat == 'n_in_1_out':
@@ -271,7 +299,9 @@ class Trainer:
 
     def eval(self, X_test, y_test):
         """
-        Evaluate the model on test data.
+        Description:
+
+            Evaluate the model on test data.
         Args:
             X_test: Test samples
             y_test: Test targets

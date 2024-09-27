@@ -39,10 +39,9 @@ ppfeatures = [
 
 def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Description:
-        CREATE `time_diff` AND MAKE IT IN SECONDS
+    CREATE `time_diff` AND MAKE IT IN SECONDS
 
-    input:
+    Args:
         - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
     output:
         - ais_data: pd.DataFrame = ais_data with `time_diff` feature
@@ -82,7 +81,7 @@ def presequence_data(
     Description:
         UPDATE `split` LABEL FOR SAMPLES NEEDED FOR BOTH training AND test
     
-    input:
+    Args:
         - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
         - seq_len: int = length of the sequences
     output:

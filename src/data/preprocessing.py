@@ -56,7 +56,7 @@ def concat_train_test_sets(
 
     CONCATENATE `ais_train` AND `ais_test` AND SELECT FINAL features
     
-    Input:
+    Args:
         - df_train: pd.DataFrame = ais_train
         - df_test: pd.DataFrame = ais_test
         - features: List[str] = list of features needed later in ais_train
@@ -82,7 +82,7 @@ def split_train_test_sets(
     Description:
         SPLIT `ais_data` INTO `ais_train` AND `ais_test`
     
-    Input:
+    Args:
         - df: pd.DataFrame = ais_data
     Output:
         - ais_train: pd.DataFrame = ais_train
@@ -165,10 +165,9 @@ def make_sequences_n_in_m_out(
         verbose: bool = False, 
     ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Description:
-        Generates sequences from ais_train
+    Generates sequences from ais_train
     
-    Input:
+    Args:
         - df_train: pd.DataFrame = ais_train
         - features_in: List of feature names used as input.
         - features_out: List of feature names used as output.
@@ -238,10 +237,9 @@ def preprocess(
         parallelize_seq: bool = False,
     ) -> None:
     """
-    Description:
-        PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
+    PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
 
-    Input:
+    Args:
         df_train: Training dataframe
         df_test: Test dataframe
         features_raw: List of raw features to include
