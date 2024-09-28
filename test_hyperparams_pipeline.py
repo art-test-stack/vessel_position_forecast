@@ -107,14 +107,14 @@ def main(seq_len, do_preprocess):
     }
 
     params = {
-        "num_layers": 1,
+        "num_layers": 2,
         "dim_ffn": 128,
         "d_model": 64,
         "nhead": 8,
         "dropout": .1,
         "layer_norm_eps": 0.00001,
         "tf_norm_first": False,
-        "bias": True,
+        "bias": False,
         "act_dec": nn.SiLU(),
         "act_out": None,
         "compute_mean": True,
@@ -213,6 +213,6 @@ def main(seq_len, do_preprocess):
     submit(res)
 
 if __name__ == "__main__":
-    seq_len = 12
+    seq_len = 32
     do_preprocess = True
     main(seq_len, do_preprocess)
