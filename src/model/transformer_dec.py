@@ -6,9 +6,6 @@ from torch import nn
 from typing import Dict, Union, Callable
 
 
-dim_ffn = 128
-d_model = 64
-
 # transformer_params = {
 #     "d_model": d_model,
 #     "nhead": 8,
@@ -28,6 +25,10 @@ d_model = 64
 
 activation_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.SiLU()
 
+
+dim_ffn = 128
+d_model = 64
+
 transformer_decoder_params = {
     "d_model": d_model,
     "nhead": 8,
@@ -43,29 +44,66 @@ transformer_decoder_params = {
     "device": DEVICE,
 }
 
+params = {
+    "num_layers": 1,
+    "dim_ffn": 128,
+    "d_model": 64,
+    "nhead": 8,
+    "dropout": .1,
+    "layer_norm_eps": 0.00001,
+    "tf_norm_first": False,
+    "bias": True,
+    "act_dec": nn.SiLU(),
+    "act_out": None,
+}
+
 class DecoderModel(nn.Module):
     def __init__(
-            self,
-            decoder_params: Dict[int,Union[int, float, bool]] = transformer_decoder_params, 
+            self, 
             num_features: int = 7, 
             num_outputs: int = 6, 
             num_layers: int = 1,
-            act_out: nn.Module | None = None
+            dim_ffn: int = 128,
+            d_model: int = 64,
+            nhead: int = 8,
+            dropout: float = .1,
+            layer_norm_eps: float = 0.00001,
+            tf_norm_first: bool = False,
+            bias: bool = True,
+            act_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.SiLU(),
+            act_out: nn.Module | Callable[[torch.Tensor], torch.Tensor] | None = None,
+            compute_mean: bool = False,
+            device: torch.device | str = DEVICE
         ) -> None:
         super().__init__()
-        self.emb_layer = nn.Linear(num_features, d_model)
-        dec_layer = nn.TransformerDecoderLayer(**decoder_params)
+        self.compute_mean = compute_mean
+
+        self.emb_layer = nn.Linear(num_features, d_model, bias=bias)
+        dec_layer = nn.TransformerDecoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_ffn,
+            dropout=dropout,
+            activation=act_dec,
+            layer_norm_eps=layer_norm_eps,
+            batch_first=True,
+            norm_first=tf_norm_first,
+            bias=bias,
+        )
         self.model = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
-        self.ffn = nn.Linear(dim_ffn, num_outputs)
+        self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
         self.act_out = act_out # nn.Sigmoid()
         
     def forward(self, x):
+        len_b, len_s, _ = x.shape
         emb = self.emb_layer(x)
         out = self.model(emb, emb)
+        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else out.mean(dim=1).reshape(len_b, 1, -1)
+        
         if self.act_out:
             return self.act_out(self.ffn(out))
         return self.ffn(out)
-    
+
 
     # def get_pad_mask(self, seq: torch.Tensor):
 

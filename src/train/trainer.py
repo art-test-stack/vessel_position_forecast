@@ -1,5 +1,8 @@
+from settings import *
+
 import torch
 from torch import nn
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 import xgboost as xgb
 
@@ -8,6 +11,8 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
 from tqdm import tqdm
+
+import uuid
 
 from typing import Callable, Tuple
 from copy import deepcopy
@@ -20,7 +25,8 @@ class Trainer:
             metric = None, 
             optimizer: torch.optim.Optimizer | None = None, 
             device: str | torch.device = 'cpu', 
-            batch_size: int = 1024
+            batch_size: int = 1024,
+            name: str = f"{str(uuid.uuid4())}.pt"
         ):
         """
         Description:
@@ -43,6 +49,7 @@ class Trainer:
         self.best_score = None
         self.batch_size = batch_size  # Add batch size for mini-batch training
         self.model.to(device)
+        self.name = name
 
     def fit(
             self, 
@@ -158,13 +165,14 @@ class Trainer:
             # avg_loss = running_loss / len(train_loader)
             # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
-            if eval_on_test and val_loader:
+            if eval_on_test and val_loader and epoch % 50 == 0:
                 val_loss = self._evaluate_nn(val_loader)
                 self._update_best_model(val_loss)
             
         if eval_on_test:
             print(f"Best model on val score: {self.best_score}")
-            
+        
+        self.save_model()
 
     def _evaluate_nn(self, val_loader):
         """
@@ -198,7 +206,14 @@ class Trainer:
             self.best_score = score
             self.best_model = deepcopy(self.model)
 
-    def find_hyperparameters(self, X_train, y_train, param_grid, search_method="grid", k_folds=5):
+    def find_hyperparameters(
+            self, 
+            X_train, 
+            y_train, 
+            param_grid, 
+            search_method="grid", 
+            k_folds=5
+        ):
         """
         Description:
 
@@ -220,7 +235,19 @@ class Trainer:
         search.fit(X_train, y_train)
         self.model = search.best_estimator_
         print(f"Best hyperparameters: {search.best_params_}")
+        self.save_model(f"best_model_{self.name}")
 
+    def save_model(self, name: str = None):
+        if not name:
+            name = self.name
+        if not name[:-3] == ".pt":
+            name = name + ".pt"
+        model_scripted = torch.jit.script(self.model) # Export to TorchScript
+        model_scripted.save(MODEL_FOLDER.joinpath(name))
+        print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
+        # LOAD MODEL
+        # model = torch.jit.load('model_scripted.pt')
+        # model.eval()
 
     def predict(self, X, pred_strat='n_in_1_out', seq_len=None):
         """

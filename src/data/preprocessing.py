@@ -298,13 +298,27 @@ def preprocess(
 
     elif seq_type == "n_in_m_out":
         assert type(seq_len_out) == int, "`seq_len_out` parameter must be an integer (int)"
-        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=seq_len_out, verbose=verbose, parallelize=parallelize_seq)
+        X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(
+            train_set, seq_len_in=seq_len, 
+            seq_len_out=seq_len_out, 
+            verbose=verbose, 
+            parallelize=parallelize_seq
+        )
     
     print("Split training and validation sets...")
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)
 
+    # df_val = make_df_val(train_set, dropped_vessel_ids, len(X_train))
     print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
-    print(X_train.mean())
 
-    return X_train, X_val, y_train, y_val, test_set, scaler
+    return X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids
+
+def make_df_val(
+        train_set: pd.DataFrame,
+        dropped_vessel_ids: List[str],        
+        idx: int,
+
+    ) -> pd.DataFrame:
+    df_val = train_set.copy()[train_set["vesselId"] not in dropped_vessel_ids].sort_values("time")
+    # train_set.iloc[:]
