@@ -31,10 +31,10 @@ def iterative_forecast(seq, model, steps, sequence_length):
         y_pred = model.predict(x_test)[0,0,:]
 
         predicted.append(y_pred)
-        seq[seq_len+k] = np.array([seq[k+1][0], *y_pred])
+        seq[seq_len+k] = np.array([seq[k+seq_len][0], *y_pred])
         
         current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,7)
-        
+
     return predicted
 
 
@@ -58,7 +58,7 @@ def main(seq_len, do_preprocess):
             verbose=True,
             to_torch=True,
             parallelize_seq = False,
-            scaler=MinMaxScaler()
+            # scaler=MinMaxScaler()
         )
 
         X_train = torch.Tensor(X_train)
@@ -92,7 +92,7 @@ def main(seq_len, do_preprocess):
         
 
     dim_ffn = 126
-    d_model = 32
+    d_model = 32 * 2
     activation_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.SiLU()
 
     transformer_decoder_params = {
@@ -116,7 +116,7 @@ def main(seq_len, do_preprocess):
                 decoder_params: Dict[int,Union[int, float, bool]] = transformer_decoder_params, 
                 num_features: int = 7, 
                 num_outputs: int = 6, 
-                num_layers: int = 1,
+                num_layers: int = 2,
                 act_out: nn.Module | None = None
             ) -> None:
             super().__init__()
@@ -136,12 +136,12 @@ def main(seq_len, do_preprocess):
                 return self.act_out(self.ffn(out))
             return self.ffn(out)
 
-    model = DecoderModel(act_out=nn.Sigmoid())
+    model = DecoderModel()
 
     trainer = Trainer(
         model=model,
         loss=nn.MSELoss(),
-        optimizer=torch.optim.AdamW(params=model.parameters()),
+        optimizer=torch.optim.AdamW(params=model.parameters(), lr=5e-5),
         device=DEVICE,
     )
     X_train = torch.Tensor(X_train).to(DEVICE)
@@ -155,7 +155,7 @@ def main(seq_len, do_preprocess):
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=700,
+        epochs=2000,
         eval_on_test=True,
         k_folds=0,
     )
@@ -223,6 +223,6 @@ def main(seq_len, do_preprocess):
     submit(res)
 
 if __name__ == "__main__":
-    seq_len = 48
+    seq_len = 12
     do_preprocess = True
     main(seq_len, do_preprocess)
