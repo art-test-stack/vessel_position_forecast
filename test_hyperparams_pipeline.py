@@ -117,6 +117,7 @@ def main(seq_len, do_preprocess):
         "bias": True,
         "act_dec": nn.SiLU(),
         "act_out": None,
+        "compute_mean": True,
     }
 
     model = DecoderModel(*params)
