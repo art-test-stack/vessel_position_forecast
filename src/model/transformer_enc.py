@@ -58,7 +58,7 @@ params = {
 }
 
 
-class DecoderModel(nn.Module):
+class EncoderModel(nn.Module):
     def __init__(
             self, 
             num_features: int = 7, 
@@ -80,7 +80,7 @@ class DecoderModel(nn.Module):
         self.compute_mean = compute_mean
 
         self.emb_layer = nn.Linear(num_features, d_model, bias=bias)
-        dec_layer = nn.TransformerDecoderLayer(
+        dec_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=nhead,
             dim_feedforward=dim_ffn,
@@ -91,14 +91,14 @@ class DecoderModel(nn.Module):
             norm_first=tf_norm_first,
             bias=bias,
         )
-        self.model = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
+        self.model = nn.TransformerEncoder(dec_layer, num_layers=num_layers)
         self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
         self.act_out = act_out # nn.Sigmoid()
         
     def forward(self, x):
         len_b, len_s, _ = x.shape
         emb = self.emb_layer(x)
-        out = self.model(emb, emb)
+        out = self.model(emb)
         out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else out.mean(dim=1).reshape(len_b, 1, -1)
         
         if self.act_out is not None:
