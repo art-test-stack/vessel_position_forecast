@@ -108,9 +108,9 @@ def main(seq_len, do_preprocess):
 
     params = {
         "num_layers": 2,
-        "dim_ffn": 128,
-        "d_model": 64,
-        "nhead": 8,
+        "dim_ffn": 63,
+        "d_model": 32,
+        "nhead": 4,
         "dropout": .1,
         "layer_norm_eps": 0.00001,
         "tf_norm_first": False,
@@ -145,7 +145,7 @@ def main(seq_len, do_preprocess):
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=1000,
+        epochs=700,
         eval_on_test=True,
         k_folds=0,
     )
