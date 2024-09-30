@@ -18,16 +18,21 @@ class FFNModel(nn.Module):
         super().__init__()
 
         self.model = nn.Sequential(
-            nn.Linear(num_features * seq_len, 64, bias=bias, dropout=dropout),
+            nn.Linear(num_features * seq_len, 64, bias=bias),
+            nn.Dropout(dropout),
             # nn.LayerNorm(64, eps=layer_norm_eps),
             nn.Sigmoid(),
-            nn.Linear(64, 64, bias=bias, dropout=dropout),
+            nn.Linear(64, 64, bias=bias),
+            nn.Dropout(dropout),
             nn.Sigmoid(),
-            nn.Linear(64, 32, bias=bias, dropout=dropout),
+            nn.Linear(64, 32, bias=bias),
+            nn.Dropout(dropout),
             nn.Sigmoid(),
-            nn.Linear(32, 16, bias=bias, dropout=dropout),
+            nn.Linear(32, 16, bias=bias),
+            nn.Dropout(dropout),
             nn.Sigmoid(),
-            nn.Linear(16, 6, bias=bias, dropout=dropout),
+            nn.Linear(16, 6, bias=bias),
+            nn.Dropout(dropout),
             nn.Sigmoid(),
         )
         
