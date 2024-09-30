@@ -51,7 +51,7 @@ def main(seq_len, do_preprocess):
 
     if do_preprocess:
 
-        X_train, X_val, y_train, y_val, test_set, scaler = preprocess(
+        X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids = preprocess(
             ais_train, 
             ais_test,
             seq_type="n_in_1_out",
@@ -63,6 +63,7 @@ def main(seq_len, do_preprocess):
             scaler=MinMaxScaler()
         )
 
+        print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
         X_train = torch.Tensor(X_train)
         y_train = torch.Tensor(y_train)
 
@@ -189,5 +190,5 @@ def main(seq_len, do_preprocess):
 
 if __name__ == "__main__":
     seq_len = 32
-    do_preprocess = True
+    do_preprocess = False
     main(seq_len, do_preprocess)
