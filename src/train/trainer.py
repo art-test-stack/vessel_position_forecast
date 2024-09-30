@@ -242,8 +242,9 @@ class Trainer:
             name = self.name
         if not name[:-3] == ".pt":
             name = name + ".pt"
-        model_scripted = torch.jit.script(self.model) # Export to TorchScript
-        model_scripted.save(MODEL_FOLDER.joinpath(name))
+        # model_scripted = torch.jit.script(self.model) # Export to TorchScript
+        torch.save(self.model, MODEL_FOLDER.joinpath(name))
+        # model_scripted.save(MODEL_FOLDER.joinpath(name))
         print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
         # LOAD MODEL
         # model = torch.jit.load('model_scripted.pt')
