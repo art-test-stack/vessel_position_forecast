@@ -60,7 +60,7 @@ def main(seq_len, do_preprocess):
             verbose=True,
             to_torch=True,
             parallelize_seq = False,
-            # scaler=MinMaxScaler()
+            scaler=MinMaxScaler()
         )
 
         X_train = torch.Tensor(X_train)
@@ -189,5 +189,5 @@ def main(seq_len, do_preprocess):
 
 if __name__ == "__main__":
     seq_len = 32
-    do_preprocess = False
+    do_preprocess = True
     main(seq_len, do_preprocess)
