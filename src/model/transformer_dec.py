@@ -91,14 +91,14 @@ class DecoderModel(nn.Module):
             norm_first=tf_norm_first,
             bias=bias,
         )
-        self.model = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
+        self.main = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
         self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
         self.act_out = act_out # nn.Sigmoid()
         
     def forward(self, x):
         len_b, len_s, _ = x.shape
         emb = self.emb_layer(x)
-        out = self.model(emb, emb)
+        out = self.main(emb, emb)
         out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else out.mean(dim=1).reshape(len_b, 1, -1)
         
         if self.act_out is not None:
