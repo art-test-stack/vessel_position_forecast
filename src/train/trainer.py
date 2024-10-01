@@ -56,7 +56,7 @@ class Trainer:
 
         self.losses = []
         self.val_losses = []
-        nn.init.normal_(self.model.weight, mean = 0.0, std = .02)
+        nn.init.normal_(self.model.parameters(), mean = 0.0, std = .02)
 
     def fit(
             self, 
