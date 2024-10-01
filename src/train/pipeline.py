@@ -126,11 +126,11 @@ def torch_model_pipeline(
     #         model = DDP(model)
 
     model.to(DEVICE)
-    opt = opt(model.parameters(), lr=lr)
+    optimizer = opt(model.parameters(), lr=lr)
     trainer = Trainer(
         model=model,
         loss=loss,
-        optimizer=opt,
+        optimizer=optimizer,
         device=DEVICE,
     )
     X_train = torch.Tensor(X_train).to(DEVICE)
@@ -167,13 +167,13 @@ def torch_model_pipeline(
 
     print("Start fine tuning...")
     model = trainer.best_model
-    opt = opt(model.parameters(), lr=lr/10)
+    optimizer = opt(model.parameters(), lr=lr/10)
     X = torch.cat([X_train, X_val], dim=0)
     y = torch.cat([y_train, y_val], dim=0)
     final_trainer = Trainer(
         model=model,
         loss=loss,
-        optimizer=opt,
+        optimizer=optimizer,
         device=DEVICE
     )
     final_trainer.fit(

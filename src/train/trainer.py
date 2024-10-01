@@ -176,10 +176,10 @@ class Trainer:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
                 self.optimizer.step()
                 
-
                 running_loss += loss.item()
-            self.losses.append(running_loss)
-            # avg_loss = running_loss / len(train_loader)
+
+            avg_loss = running_loss / len(train_loader)
+            self.losses.append(avg_loss)
             # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
             if eval_on_test and val_loader and epoch % self.eval_step == 0:
@@ -211,10 +211,10 @@ class Trainer:
                 loss = self.metric(outputs, targets)
                 running_val_loss += loss.item()
 
-        self.val_losses.append(running_val_loss)
-        # avg_val_loss = running_val_loss # / len(val_loader)
+        avg_val_loss = running_val_loss / len(val_loader)
+        self.val_losses.append(avg_val_loss)
         # print(f"Validation Loss: {avg_val_loss:.4f}")
-        return running_val_loss
+        return avg_val_loss
 
     def _update_best_model(self, score):
         """
