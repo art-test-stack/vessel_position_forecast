@@ -231,7 +231,7 @@ class Trainer:
         plt.ioff()
 
         fig = plt.figure()
-        plt.plot(len(self.losses), self.losses, label='Training Loss')
+        plt.plot(range(len(self.losses)), self.losses, label='Training Loss')
         plt.plot([i * self.eval_step for i in range(len(self.val_losses))], self.val_losses, label='Validation Loss')
         plt.legend()
         plt.savefig(folder)
