@@ -50,7 +50,9 @@ def torch_model_pipeline(
         verbose: bool = True,
         to_torch: bool = True,
         parallelize_seq: bool = False,
-        scaler: MinMaxScaler = MinMaxScaler()
+        scaler: MinMaxScaler = MinMaxScaler(),
+        epochs_tr: int = 200,
+        epochs_ft: int = 500
     ):
     # OPEN NEEDED `*.csv` files
 
@@ -146,7 +148,7 @@ def torch_model_pipeline(
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=200,
+        epochs=epochs_tr,
         eval_on_test=True,
         k_folds=0,
     )
@@ -179,7 +181,7 @@ def torch_model_pipeline(
         y=y,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=500,
+        epochs=epochs_ft,
         eval_on_test=True,
         k_folds=0,
         split_ratio=.95

@@ -18,9 +18,9 @@ if __name__ == "__main__":
     do_preprocess = False
 
     model = FFNModel()
-    
+
     torch_model_pipeline(
-        model = nn.Module,
+        model = model,
         do_preprocess = do_preprocess,
         loss = nn.MSELoss(),
         opt = torch.optim.AdamW,
@@ -31,5 +31,7 @@ if __name__ == "__main__":
         verbose = True,
         to_torch = True,
         parallelize_seq = False,
-        scaler = MinMaxScaler()
+        scaler = MinMaxScaler(),
+        epochs_tr=200,
+        epochs_ft=500
     )
