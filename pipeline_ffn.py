@@ -17,7 +17,7 @@ if __name__ == "__main__":
     seq_len = 32
     do_preprocess = False
 
-    model = FFNModel()
+    model = FFNModel(seq_len=seq_len)
 
     torch_model_pipeline(
         model = model,

@@ -56,6 +56,8 @@ class Trainer:
 
         self.losses = []
         self.val_losses = []
+
+        self.eval_step = 20
         
         for layer in model.main:
             if isinstance(layer, nn.Linear):
@@ -180,7 +182,7 @@ class Trainer:
             # avg_loss = running_loss / len(train_loader)
             # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
-            if eval_on_test and val_loader and epoch % 50 == 0:
+            if eval_on_test and val_loader and epoch % self.eval_step == 0:
                 val_loss = self._evaluate_nn(val_loader)
                 self._update_best_model(val_loss)
             
@@ -229,8 +231,8 @@ class Trainer:
         plt.ioff()
 
         fig = plt.figure()
-        plt.plot(len(self.losses), self.losses, label='Training Loss')
-        plt.plot([i * 50 for i in range(len(self.val_losses))], self.val_losses, label='Validation Loss')
+        plt.plot(range(len(self.losses)), self.losses, label='Training Loss')
+        plt.plot([i * self.eval_step for i in range(len(self.val_losses))], self.val_losses, label='Validation Loss')
         plt.legend()
         plt.savefig(folder)
         plt.close(fig)
