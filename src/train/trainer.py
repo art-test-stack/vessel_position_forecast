@@ -9,6 +9,7 @@ import xgboost as xgb
 from sklearn.model_selection import KFold, GridSearchCV, RandomizedSearchCV
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
@@ -26,7 +27,8 @@ class Trainer:
             optimizer: torch.optim.Optimizer | None = None, 
             device: str | torch.device = 'cpu', 
             batch_size: int = 1024,
-            name: str = f"{str(uuid.uuid4())}.pt"
+            name: str = f"{str(uuid.uuid4())}.pt",
+            clip_grad: bool = True
         ):
         """
         Description:
@@ -50,6 +52,11 @@ class Trainer:
         self.batch_size = batch_size  # Add batch size for mini-batch training
         self.model.to(device)
         self.name = name
+        self.clip_grad = clip_grad
+
+        self.losses = []
+        self.val_losses = []
+        nn.init.normal_(self.model.weight, mean = 0.0, std = .02)
 
     def fit(
             self, 
@@ -57,7 +64,8 @@ class Trainer:
             y: torch.Tensor | np.ndarray, 
             k_folds: int = 5, 
             epochs: int = 10, 
-            eval_on_test: bool = False
+            eval_on_test: bool = False,
+            split_ratio: float = .9
         ):
         """
         Description:
@@ -102,7 +110,7 @@ class Trainer:
 
         else: 
             # TODO: Random split
-            idx = int(len(X) * .9) if eval_on_test else len(X) - 1
+            idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
             X_train, y_train = X[:idx], y[:idx]
             X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
             
@@ -158,10 +166,14 @@ class Trainer:
 
                 self.optimizer.zero_grad()
                 loss.backward()
+
+                if self.clip_grad:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
                 self.optimizer.step()
+                
 
                 running_loss += loss.item()
-
+            self.losses.append(running_loss)
             # avg_loss = running_loss / len(train_loader)
             # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
@@ -172,7 +184,9 @@ class Trainer:
         if eval_on_test:
             print(f"Best model on val score: {self.best_score}")
         
-        self.save_model()
+        self.save_model(best = True)
+        self.plot_losses()
+
 
     def _evaluate_nn(self, val_loader):
         """
@@ -192,9 +206,10 @@ class Trainer:
                 loss = self.metric(outputs, targets)
                 running_val_loss += loss.item()
 
-        avg_val_loss = running_val_loss / len(val_loader)
+        self.val_losses.append(running_val_loss)
+        # avg_val_loss = running_val_loss # / len(val_loader)
         # print(f"Validation Loss: {avg_val_loss:.4f}")
-        return avg_val_loss
+        return running_val_loss
 
     def _update_best_model(self, score):
         """
@@ -205,6 +220,20 @@ class Trainer:
         if self.best_score is None or score < self.best_score:
             self.best_score = score
             self.best_model = deepcopy(self.model)
+
+    def plot_losses(self, display: bool = False):
+        folder = MODEL_FOLDER.joinpath(self.name + '.png')
+        plt.ioff()
+
+        fig = plt.figure()
+        plt.plot(len(self.losses), self.losses, label='Training Loss')
+        plt.plot([i * 50 for i in range(len(self.val_losses))], self.val_losses, label='Validation Loss')
+        plt.legend()
+        plt.savefig(folder)
+        plt.close(fig)
+        if display:
+            plt.show()
+
 
     def find_hyperparameters(
             self, 
@@ -237,15 +266,17 @@ class Trainer:
         print(f"Best hyperparameters: {search.best_params_}")
         self.save_model(f"best_model_{self.name}")
 
-    def save_model(self, name: str = None):
+    def save_model(self, name: str = None, best: bool = False):
         if not name:
             name = self.name
         if not name[:-3] == ".pt":
             name = name + ".pt"
-        # model_scripted = torch.jit.script(self.model) # Export to TorchScript
-        torch.save(self.model, MODEL_FOLDER.joinpath(name))
-        # model_scripted.save(MODEL_FOLDER.joinpath(name))
+
+        model = self.best_model if best else self.model
+
+        torch.save(model, MODEL_FOLDER.joinpath(name))
         print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
+
         # LOAD MODEL
         # model = torch.jit.load('model_scripted.pt')
         # model.eval()

@@ -40,7 +40,20 @@ def iterative_forecast(seq, model, steps, sequence_length):
     return predicted
 
 
-def main(seq_len, do_preprocess):
+def main(
+        model: nn.Module,
+        do_preprocess: bool = True,
+        loss: Callable = nn.MSELoss(),
+        opt: torch.optim.Optimizer = torch.optim.Adam,
+        lr: float = 5e-4,
+        seq_len: int = 32, 
+        seq_type = "n_in_1_out",
+        seq_len_out: int = 1,
+        verbose: bool = True,
+        to_torch: bool = True,
+        parallelize_seq: bool = False,
+        scaler: MinMaxScaler = MinMaxScaler()
+    ):
     # OPEN NEEDED `*.csv` files
 
     ais_train = pd.read_csv(AIS_TRAIN, sep='|')
@@ -54,13 +67,13 @@ def main(seq_len, do_preprocess):
         X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids = preprocess(
             ais_train, 
             ais_test,
-            seq_type="n_in_1_out",
+            seq_type=seq_type,
             seq_len=seq_len,
-            seq_len_out=1,
-            verbose=True,
-            to_torch=True,
-            parallelize_seq = False,
-            scaler=MinMaxScaler()
+            seq_len_out=seq_len_out,
+            verbose=verbose,
+            to_torch=to_torch,
+            parallelize_seq = parallelize_seq,
+            scaler=scaler
         )
 
         print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
@@ -93,18 +106,18 @@ def main(seq_len, do_preprocess):
             print(f"ERROR: File missing in {str(LAST_PREPROCESS_FOLDER)}. Now run preprocessing...")
             return main(seq_len, do_preprocess)
 
-    model = FFNModel(num_features=7, seq_len=seq_len)
 
-    if torch.cuda.is_available():
-        device = "cuda:0"
-        if torch.cuda.device_count() > 1:
-            model = DDP(model)
-    model.to(device)
+    # if torch.cuda.is_available():
+    #     device = "cuda:0"
+    #     if torch.cuda.device_count() > 1:
+    #         model = DDP(model)
 
+    model.to(DEVICE)
+    opt = opt(model.parameters(), lr=lr)
     trainer = Trainer(
         model=model,
-        loss=nn.MSELoss(),
-        optimizer=torch.optim.AdamW(params=model.parameters(), lr=5e-5),
+        loss=loss,
+        optimizer=opt,
         device=DEVICE,
     )
     X_train = torch.Tensor(X_train).to(DEVICE)
@@ -116,12 +129,13 @@ def main(seq_len, do_preprocess):
     y_train = y_train.reshape(-1, 6)
     y_val = y_val.reshape(-1, 6)
 
+    print("Start training...")
     trainer.fit(
         X=X_train,
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=700,
+        epochs=200,
         eval_on_test=True,
         k_folds=0,
     )
@@ -137,7 +151,28 @@ def main(seq_len, do_preprocess):
         except:
             print("Score ???")
 
-    
+
+    print("Start fine tuning...")
+    model = trainer.best_model
+    opt = opt(model.parameters(), lr=lr/10)
+    X = torch.cat([X_train, X_val], dim=0)
+    y = torch.cat([y_train, y_val], dim=0)
+    final_trainer = Trainer(
+        model=model,
+        loss=loss,
+        optimizer=opt,
+        device=DEVICE
+    )
+    final_trainer.fit(
+        X=X,
+        y=y,
+        # X_val=X_val,
+        # y_val=y_val,
+        epochs=500,
+        eval_on_test=True,
+        k_folds=0,
+        split_ratio=.95
+    )
     # PREDICTION STEP
 
     grouped_test = test_set.groupby("vesselId")
@@ -191,4 +226,17 @@ def main(seq_len, do_preprocess):
 if __name__ == "__main__":
     seq_len = 32
     do_preprocess = False
-    main(seq_len, do_preprocess)
+    main(
+        model = nn.Module,
+        do_preprocess = do_preprocess,
+        loss = nn.MSELoss(),
+        opt = torch.optim.Adam,
+        lr = 5e-4,
+        seq_len = 32, 
+        seq_type = "n_in_1_out",
+        seq_len_out = 1,
+        verbose = True,
+        to_torch = True,
+        parallelize_seq = False,
+        scaler = MinMaxScaler()
+    )
