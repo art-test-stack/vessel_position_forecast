@@ -17,7 +17,7 @@ class FFNModel(nn.Module):
         ) -> None:
         super().__init__()
 
-        self.model = nn.Sequential(
+        self.main = nn.Sequential(
             nn.Linear(num_features * seq_len, 128, bias=bias),
             nn.Dropout(dropout),
             # nn.LayerNorm(64, eps=layer_norm_eps),

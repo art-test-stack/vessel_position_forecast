@@ -56,7 +56,10 @@ class Trainer:
 
         self.losses = []
         self.val_losses = []
-        nn.init.normal_(self.model.parameters(), mean = 0.0, std = .02)
+        
+        for layer in model.main:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_normal(layer.weight)
 
     def fit(
             self, 
