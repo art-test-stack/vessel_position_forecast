@@ -102,7 +102,7 @@ class EncoderModel(nn.Module):
     def forward(self, x):
         len_b, len_s, _ = x.shape
         out = self.main(x)
-        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else out.mean(dim=1).reshape(len_b, 1, -1)
+        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else torch.mean(out, dim=1).reshape(len_b, 1, -1)
         
         if self.act_out is not None:
             return self.act_out(self.ffn(out))

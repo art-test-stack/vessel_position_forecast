@@ -142,7 +142,26 @@ class Trainer:
             val_loader = None
         
         return train_loader, val_loader
+    
+        # model.train()
+        # for epoch in range(1, 5):
+        # with tqdm(train_loader, unit="batch") as tepoch:
+        #     for data, target in tepoch:
+        #         tepoch.set_description(f"Epoch {epoch}")
 
+        #         data, target = data.to(device), target.to(device)
+        #         optimizer.zero_grad()
+        #         output = model(data)
+        #         predictions = output.argmax(dim=1, keepdim=True).squeeze()
+        #         loss = F.nll_loss(output, target)
+        #         correct = (predictions == target).sum().item()
+        #         accuracy = correct / batch_size
+
+        #         loss.backward()
+        #         optimizer.step()
+                
+        #         tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy)
+        #         sleep(0.1)
 
     def _train_nn(
             self, 

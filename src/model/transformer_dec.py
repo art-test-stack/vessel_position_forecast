@@ -2,7 +2,7 @@ from settings import DEVICE
 
 import torch
 from torch import nn
-
+import torch.nn.functional as F
 from typing import Dict, Union, Callable
 
 
@@ -99,7 +99,7 @@ class DecoderModel(nn.Module):
         len_b, len_s, _ = x.shape
         emb = self.emb_layer(x)
         out = self.main(emb, emb)
-        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else out.mean(dim=1).reshape(len_b, 1, -1)
+        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else torch.mean(out, dim=1).reshape(len_b, 1, -1)
         
         if self.act_out is not None:
             return self.act_out(self.ffn(out))

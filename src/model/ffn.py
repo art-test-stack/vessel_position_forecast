@@ -22,23 +22,23 @@ class FFNModel(nn.Module):
             nn.Dropout(dropout),
             # nn.LayerNorm(64, eps=layer_norm_eps),
             nn.LayerNorm(128),
-            nn.SiLU(),
+            nn.Sigmoid(),
             nn.Linear(128, 64, bias=bias),
             nn.Dropout(dropout),
             nn.LayerNorm(64),
-            nn.SiLU(),
-            nn.Linear(64, 64, bias=bias),
-            nn.Dropout(dropout),
-            nn.LayerNorm(64),
-            nn.SiLU(),
+            # nn.Sigmoid(),
+            # nn.Linear(64, 64, bias=bias),
+            # nn.Dropout(dropout),
+            # nn.LayerNorm(64),
+            nn.Sigmoid(),
             nn.Linear(64, 32, bias=bias),
             nn.Dropout(dropout),
             nn.LayerNorm(32),
-            nn.SiLU(),
+            nn.Sigmoid(),
             nn.Linear(32, 16, bias=bias),
             nn.Dropout(dropout),
             nn.LayerNorm(16),
-            nn.SiLU(),
+            nn.Sigmoid(),
             nn.Linear(16, 6, bias=bias),
             nn.Dropout(dropout),
             nn.LayerNorm(6),
@@ -48,7 +48,7 @@ class FFNModel(nn.Module):
     def forward(self, x: torch.Tensor):
         len_b = x.shape[0]
         if len(x.shape) == 3:
-            x = x.reshape(len_b, -1)
+            x = x.view(len_b, -1)
         
         out = self.main(x)
         return out
