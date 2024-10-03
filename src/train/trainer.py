@@ -195,7 +195,7 @@ class Trainer:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
                 self.optimizer.step()
                 
-                running_loss += loss.item()
+                running_loss += loss.item() * len(inputs)
 
             avg_loss = running_loss / len(train_loader)
             self.losses.append(avg_loss)
@@ -228,7 +228,7 @@ class Trainer:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
                 loss = self.metric(outputs, targets)
-                running_val_loss += loss.item()
+                running_val_loss += loss.item() * len(inputs)
 
         avg_val_loss = running_val_loss / len(val_loader)
         self.val_losses.append(avg_val_loss)
