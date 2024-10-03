@@ -234,4 +234,6 @@ def torch_model_pipeline(
             print("Error register file")
             submit(forecast)
 
+    print("res describe")
+    print(res.describe())
     submit(res)
