@@ -14,8 +14,8 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 if __name__ == "__main__":
-    seq_len = 32
-    do_preprocess = False
+    seq_len = 128
+    do_preprocess = True
 
     model = FFNModel(seq_len=seq_len)
 

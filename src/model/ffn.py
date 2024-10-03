@@ -48,7 +48,7 @@ class FFNModel(nn.Module):
     def forward(self, x: torch.Tensor):
         len_b = x.shape[0]
         if len(x.shape) == 3:
-            x = x.view(len_b, -1)
+            x = x.reshape(len_b, -1)
         
         out = self.main(x)
         return out

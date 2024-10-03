@@ -72,7 +72,7 @@ def torch_model_pipeline(
             seq_len_out=seq_len_out,
             verbose=verbose,
             to_torch=to_torch,
-            parallelize_seq = parallelize_seq,
+            parallelize_seq=parallelize_seq,
             scaler=scaler
         )
 
