@@ -287,6 +287,8 @@ def preprocess(
         test_set[features_input] = scaler.transform(test_set[features_input])
     # train_set = train_set.dropna(subset="time_diff")
 
+    # X = X[features_input]
+    # y = y[features_output]
     # MAKE SEQUENCE
     if verbose:
         print(f"Create training sequences on mode '{seq_type}'...")
@@ -305,8 +307,6 @@ def preprocess(
             parallelize=parallelize_seq
         )
     
-    X = X[features_input]
-    y = y[features_output]
     print("Split training and validation sets...")
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)

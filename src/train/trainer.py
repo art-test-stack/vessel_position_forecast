@@ -61,7 +61,7 @@ class Trainer:
         
         for layer in model.main:
             if isinstance(layer, nn.Linear):
-                torch.nn.init.xavier_normal(layer.weight)
+                torch.nn.init.xavier_normal_(layer.weight)
 
     def fit(
             self, 
