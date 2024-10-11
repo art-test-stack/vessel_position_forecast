@@ -71,6 +71,34 @@ def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     # )
     return df
 
+def create_long_lat_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    CREATE `long_diff` AND `lat_diff`
+
+    Args:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+    output:
+        - ais_data: pd.DataFrame = ais_data with `long_diff` and `lat_diff` features
+    """
+
+    df['long_diff'] = (
+        df
+        .sort_values(by=['time'])
+        .groupby("vesselId")['longitude']
+        .diff(-1)
+        # .abs()
+        .dropna()
+    )
+
+    df['lat_diff'] = (
+        df
+        .sort_values(by=['time'])
+        .groupby("vesselId")['latitude']
+        .diff(-1)
+        # .abs()
+        .dropna()
+    )
+    return df
 
 def presequence_data(
         df: pd.DataFrame, 

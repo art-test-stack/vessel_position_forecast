@@ -1,4 +1,4 @@
-from src.data.features import create_time_diff_feature, presequence_data
+from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature
 
 import concurrent.futures
 
@@ -274,6 +274,7 @@ def preprocess(
     if verbose:
         print("Create features...")
     df = create_time_diff_feature(df)
+    df = create_long_lat_diff_feature(df)
 
 
     # UPDATE `split` LABEL IN df
