@@ -41,11 +41,11 @@ from sklearn.preprocessing import MinMaxScaler
 def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len):
     preds = []
     # diff_lat_pred = []
-    current_sequence = seq[:seq_len].reshape(1,seq_len,21)
+    current_sequence = seq[:seq_len].reshape(1,seq_len,19)
     # current_sequence = last_known[-seq_len:]
     for k in range(steps):
         # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
-        x_test = torch.Tensor(current_sequence).to(DEVICE)
+        x_test = torch.Tensor(current_sequence.astype(np.float32)).to(DEVICE)
         y_pred = model.predict(x_test)[-1,:]
 
         preds.append(y_pred)
@@ -54,7 +54,7 @@ def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len):
 
         seq[seq_len+k] = np.array([seq[k+seq_len][:17], *y_pred[:-2]])
         
-        current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,21)
+        current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,19)
 
     return preds
 
@@ -98,11 +98,11 @@ def torch_model_pipeline(
         )
 
         print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
-        X_train = torch.Tensor(X_train)
-        y_train = torch.Tensor(y_train)
+        X_train = torch.Tensor(X_train.astype(np.float32))
+        y_train = torch.Tensor(y_train.astype(np.float32))
 
-        X_val = torch.Tensor(X_val)
-        y_val = torch.Tensor(y_val)
+        X_val = torch.Tensor(X_val.astype(np.float32))
+        y_val = torch.Tensor(y_val.astype(np.float32))
 
         torch.save(X_train, LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"))
         torch.save(y_train, LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"))

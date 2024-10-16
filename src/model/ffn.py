@@ -9,6 +9,7 @@ class FFNModel(nn.Module):
     def __init__(
             self, 
             num_features: int = 7,
+            dim_out: int = 6,
             seq_len: int = 1,
             dropout: float = .1,
             layer_norm_eps: float = 0.00001,
@@ -39,9 +40,9 @@ class FFNModel(nn.Module):
             nn.Dropout(dropout),
             nn.LayerNorm(16),
             nn.ReLU(),
-            nn.Linear(16, 6, bias=bias),
+            nn.Linear(16, dim_out, bias=bias),
             nn.Dropout(dropout),
-            nn.LayerNorm(6),
+            nn.LayerNorm(dim_out),
             # nn.Sigmoid(),
         )
         
