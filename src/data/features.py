@@ -24,10 +24,10 @@ ppfeatures = [
     'sog',
     'rot',
     'heading',
-    # 'navstat',
+    'navstat',
     # 'etaRaw',
-    'latitude',
     'longitude',
+    'latitude',
 ]
 
 # TODO: 
@@ -43,7 +43,7 @@ def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
 
     Args:
         - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
-    output:
+    Returns:
         - ais_data: pd.DataFrame = ais_data with `time_diff` feature
     """
 
@@ -77,7 +77,7 @@ def create_long_lat_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
 
     Args:
         - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
-    output:
+    Returns:
         - ais_data: pd.DataFrame = ais_data with `long_diff` and `lat_diff` features
     """
 
@@ -100,6 +100,28 @@ def create_long_lat_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     )
     return df
 
+def one_hot_encode(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """
+    ONE-HOT ENCODE `column` IN `df`
+
+    Args:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+        - column: str = column to one-hot encode
+    Returns:
+        - ais_data: pd.DataFrame = ais_data with one-hot encoded `column`
+    """
+    df[column] = (
+        df
+        .sort_values(by=['time'])
+        .groupby("vesselId")[column]
+        .apply(lambda x: x.ffill().bfill())
+    )
+    df = pd.concat(
+        [df, pd.get_dummies(df[column], prefix=column)], 
+        axis=1
+    )
+    return df
+
 def presequence_data(
         df: pd.DataFrame, 
         vessel_ids: List[str],
@@ -112,7 +134,7 @@ def presequence_data(
     Args:
         - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
         - seq_len: int = length of the sequences
-    output:
+    Returns:
         - ais_data: pd.DataFrame = ais_data with updated `split` label
     """
 

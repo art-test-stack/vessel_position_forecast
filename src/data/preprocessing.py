@@ -1,4 +1,4 @@
-from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature
+from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature, one_hot_encode
 
 import concurrent.futures
 
@@ -19,19 +19,52 @@ features_raw_ais_data = [
     'sog',
     'rot',
     'heading',
+    'navstat',
     'latitude',
     'longitude',
 ]
 
 features_input = [
     'time_diff',
+    # 'navstat',
+    # 'latitude',
+    # 'longitude',
+    'navstat_0', 
+    'navstat_1',
+    'navstat_2',
+    'navstat_3',
+    'navstat_4',
+    'navstat_5',
+    'navstat_6',
+    'navstat_7',
+    'navstat_8',
+    'navstat_9',
+    'navstat_11',
+    'navstat_12',
+    'navstat_13',
+    'navstat_14',
+    'navstat_15',
     'cog',
     'sog',
     'rot',
     'heading',
-    'latitude',
-    'longitude',
+    # 'long_diff',
+    # 'lat_diff',
 ]
+
+features_to_scale = [
+    'time_diff',
+    # 'navstat',
+    # 'latitude',
+    # 'longitude',
+    'cog',
+    'sog',
+    'rot',
+    'heading',
+    'long_diff',
+    'lat_diff',
+]
+
 
 features_output = [
     # 'time_diff',
@@ -39,8 +72,8 @@ features_output = [
     'sog',
     'rot',
     'heading',
-    'latitude',
-    'longitude',
+    'long_diff',
+    'lat_diff',
 ]
 
 seq_types = ["basic", "n_in_1_out", "n_in_m_out"]
@@ -60,7 +93,7 @@ def concat_train_test_sets(
         - df_train: pd.DataFrame = ais_train
         - df_test: pd.DataFrame = ais_test
         - features: List[str] = list of features needed later in ais_train
-    Output:
+    Returns:
         - ais_data: pd.DataFrame = concatenation of ais_train and ais_test
     """
 
@@ -84,7 +117,7 @@ def split_train_test_sets(
     
     Args:
         - df: pd.DataFrame = ais_data
-    Output:
+    Returns:
         - ais_train: pd.DataFrame = ais_train
         - ais_test: pd.DataFrame = ais_test
     """
@@ -94,50 +127,6 @@ def split_train_test_sets(
 
     return data_train, data_test
 
-
-# def make_sequences_n_in_1_out(
-#         df_train: pd.DataFrame,
-#         features_in: List[str] = features_input,
-#         features_out: List[str] = features_output,
-#         seq_len: int = 1,
-#         to_torch: bool = False
-#     ) -> Any:
-#     """
-#     Description:
-#         ...
-    
-#     Input:
-#         - df_train: pd.DataFrame = ais_train
-#         - ...
-#     Output:
-#         - ...
-#     """
-
-#     grouped = df_train.sort_values("time").groupby("vesselId")
-
-#     def _n_in_1_out(data, sequence_length):
-#         sequences = []
-#         # targets = []
-#         for i in range(len(data) - sequence_length):
-#             seq = data[i:i+sequence_length].values
-#             # target = data[features_in].iloc[i+sequence_length].values
-#             sequences.append(seq)
-#             # targets.append(target)
-#         return sequences # , targets
-
-#     X, y = [], []
-
-#     for _, group in grouped:
-#         X_raw = group[features_in].iloc[:-1]
-#         y_raw = group[features_out].iloc[seq_len:]
-
-#         sequences = _n_in_1_out(X_raw, seq_len)
-#         # sequences, targets = _n_in_1_out(X_raw, seq_len)
-#         X.extend(sequences)
-#         y.extend(y_raw)
-
-#     X = torch.Tensor(X) if to_torch else np.array(X)
-#     y = torch.Tensor(y) if to_torch else np.array(y)
 
 
 def _n_in_m_out(args):
@@ -174,7 +163,7 @@ def make_sequences_n_in_m_out(
         - seq_len_in: Length of the input sequence.
         - seq_len_out: Length of the output sequence.
         - to_torch: Whether to convert the output to torch Tensors.
-    Output:
+    Returns:
         - X: Input sequences.
         - y: Output targets.
     """
@@ -250,7 +239,7 @@ def preprocess(
         to_torch: Convert to PyTorch tensors
         normalize: Whether to normalize the data using z-score
 
-    Output:
+    Returns:
         Preprocessed data ready for training and testing.
     """
     # PUT asserts HERE
@@ -276,7 +265,9 @@ def preprocess(
     df = create_time_diff_feature(df)
     df = create_long_lat_diff_feature(df)
 
-
+    df_lat_long = df[["time", "vesselId", "latitude", "longitude"]].copy()
+    df = one_hot_encode(df, "navstat")
+    
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
 
@@ -284,8 +275,8 @@ def preprocess(
 
     # TODO: Look for better way to normalize
     if normalize: 
-        train_set[features_input] = scaler.fit_transform(train_set[features_input])
-        test_set[features_input] = scaler.transform(test_set[features_input])
+        train_set[features_to_scale] = scaler.fit_transform(train_set[features_to_scale])
+        test_set[features_to_scale] = scaler.transform(test_set[features_to_scale])
     # train_set = train_set.dropna(subset="time_diff")
 
     # X = X[features_input]
@@ -315,7 +306,7 @@ def preprocess(
     # df_val = make_df_val(train_set, dropped_vessel_ids, len(X_train))
     print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
 
-    return X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids
+    return X_train, X_val, y_train, y_val, test_set, scaler, df_lat_long, dropped_vessel_ids
 
 def make_df_val(
         train_set: pd.DataFrame,

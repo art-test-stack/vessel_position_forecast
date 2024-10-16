@@ -1,7 +1,7 @@
 from settings import *
 from utils import *
 
-from src.data.preprocessing import preprocess, features_input
+from src.data.preprocessing import preprocess, features_to_scale, features_input
 
 from src.train.trainer import Trainer
 
@@ -21,21 +21,42 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 
-def iterative_forecast(seq, model, steps, seq_len):
-    predicted = []
-    current_sequence = seq[:seq_len].reshape(1,seq_len,7)
+# def iterative_forecast(seq, model, steps, seq_len):
+#     predicted = []
+#     current_sequence = seq[:seq_len].reshape(1,seq_len,7)
+#     # current_sequence = last_known[-seq_len:]
+#     for k in range(steps):
+#         # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
+#         x_test = torch.Tensor(current_sequence).to(DEVICE)
+#         y_pred = model.predict(x_test)[-1,:]
+
+#         predicted.append(y_pred)
+#         seq[seq_len+k] = np.array([seq[k+seq_len][0], *y_pred])
+        
+#         current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,7)
+
+#     return predicted
+
+
+def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len):
+    preds = []
+    # diff_lat_pred = []
+    current_sequence = seq[:seq_len].reshape(1,seq_len,21)
     # current_sequence = last_known[-seq_len:]
     for k in range(steps):
         # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
         x_test = torch.Tensor(current_sequence).to(DEVICE)
         y_pred = model.predict(x_test)[-1,:]
 
-        predicted.append(y_pred)
-        seq[seq_len+k] = np.array([seq[k+seq_len][0], *y_pred])
-        
-        current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,7)
+        preds.append(y_pred)
+        # diff_long_pred.append(y_pred[-2])
+        # diff_lat_pred.append( y_pred[-1] )
 
-    return predicted
+        seq[seq_len+k] = np.array([seq[k+seq_len][:17], *y_pred[:-2]])
+        
+        current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,21)
+
+    return preds
 
 
 def torch_model_pipeline(
@@ -64,7 +85,7 @@ def torch_model_pipeline(
 
     if do_preprocess:
 
-        X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids = preprocess(
+        X_train, X_val, y_train, y_val, test_set, scaler, df_lat_long, dropped_vessel_ids = preprocess(
             ais_train, 
             ais_test,
             seq_type=seq_type,
@@ -199,11 +220,27 @@ def torch_model_pipeline(
 
         last_known_features = group[features_input].values
 
-        future_preds = iterative_forecast(last_known_features, trainer, forecast_steps, sequence_length)
+        # MAYBE NAN VALUES HERE (SHOULD TAKE LAST NOT NAN VALUES) - MAYBE TODO
+        last_vessel_lat = df_lat_long.loc[df_lat_long['vesselId'] == vessel_id].sort_values(by='time')['latitude'].values[-1]
+        last_vessel_long = df_lat_long.loc[df_lat_long['vesselId'] == vessel_id].sort_values(by='time')['longitude'].values[-1]
+
+        preds = iterative_forecast_on_long_lat_diff(
+            last_known_features, 
+            last_vessel_long, 
+            last_vessel_lat, 
+            trainer, 
+            forecast_steps, 
+            sequence_length
+        )
         
-        group.loc[group.index[seq_len:],['cog', 'sog', 'rot', 'heading', 'latitude', 'longitude']] = future_preds
+        group.loc[group.index[seq_len:],['cog', 'sog', 'rot', 'heading', 'long_diff', 'lat_diff']] = preds
         
         group[features_input] = scaler.inverse_transform(group[features_input])
+
+        group.loc[group.index[seq_len:],'longitude'] = group.loc[group.index[seq_len:], 'long_diff'].values.cumsum() + group.loc[group.index[seq_len -1],'longitude']
+        group.loc[group.index[seq_len:],'latitude'] = group.loc[group.index[seq_len:], 'lat_diff'].values.cumsum() + group.loc[group.index[seq_len -1],'latitude']
+        # group.loc[group.index[seq_len:],'latitude'] = lat_pred
+        
         predictions.append(group.copy())
 
     df_preds = pd.concat(predictions, ignore_index=True)
