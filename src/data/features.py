@@ -110,11 +110,13 @@ def one_hot_encode(df: pd.DataFrame, column: str) -> pd.DataFrame:
     Returns:
         - ais_data: pd.DataFrame = ais_data with one-hot encoded `column`
     """
-    df[column] = (
+    
+    df[[column]] = (
         df
         .sort_values(by=['time'])
         .groupby("vesselId")[column]
         .apply(lambda x: x.ffill().bfill())
+        # .reset_index(level=0, drop=True)
     )
     df = pd.get_dummies(df, prefix=column)
     #             pd.concat(
