@@ -237,8 +237,8 @@ def torch_model_pipeline(
         
         group[features_input] = scaler.inverse_transform(group[features_input])
 
-        group.loc[group.index[seq_len:],'longitude'] = group.loc[group.index[seq_len:], 'long_diff'].values.cumsum() + group.loc[group.index[seq_len -1],'longitude']
-        group.loc[group.index[seq_len:],'latitude'] = group.loc[group.index[seq_len:], 'lat_diff'].values.cumsum() + group.loc[group.index[seq_len -1],'latitude']
+        group.loc[group.index[seq_len:],'longitude'] = group.loc[group.index[seq_len:], 'long_diff'].values.cumsum() + last_vessel_long # group.loc[group.index[seq_len -1],'longitude']
+        group.loc[group.index[seq_len:],'latitude'] = group.loc[group.index[seq_len:], 'lat_diff'].values.cumsum() + last_vessel_lat # group.loc[group.index[seq_len -1],'latitude']
         # group.loc[group.index[seq_len:],'latitude'] = lat_pred
         
         predictions.append(group.copy())

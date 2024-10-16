@@ -265,7 +265,7 @@ def preprocess(
     df = create_time_diff_feature(df)
     df = create_long_lat_diff_feature(df)
 
-    df_lat_long = df[["time", "vesselId", "latitude", "longitude"]].copy()
+    df_lat_long = df_train[["time", "vesselId", "latitude", "longitude"]].copy()
     df = one_hot_encode(df, "navstat")
     
     # UPDATE `split` LABEL IN df
