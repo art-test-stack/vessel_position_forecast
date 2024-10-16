@@ -116,10 +116,11 @@ def one_hot_encode(df: pd.DataFrame, column: str) -> pd.DataFrame:
         .groupby("vesselId")[column]
         .apply(lambda x: x.ffill().bfill())
     )
-    df = pd.concat(
-        [df, pd.get_dummies(df[column], prefix=column)], 
-        axis=1
-    )
+    df = pd.get_dummies(df, prefix=column)
+    #             pd.concat(
+    #     [df.reset_index(drop=True), pd.get_dummies(df[column].reset_index(drop=True), prefix=column)], 
+    #     axis=1
+    # )
     return df
 
 def presequence_data(
