@@ -29,21 +29,10 @@ features_input = [
     # 'navstat',
     # 'latitude',
     # 'longitude',
-    'navstat_0', 
-    'navstat_1',
-    'navstat_2',
-    'navstat_3',
-    'navstat_4',
-    'navstat_5',
-    'navstat_6',
-    'navstat_7',
-    'navstat_8',
-    'navstat_9',
-    'navstat_11',
-    'navstat_12',
-    'navstat_13',
-    'navstat_14',
-    'navstat_15',
+    'navstat_1.0', 'navstat_2.0', 'navstat_3.0', 'navstat_4.0',
+    'navstat_5.0', 'navstat_6.0', 'navstat_7.0', 'navstat_8.0',
+    'navstat_9.0', 'navstat_11.0', 'navstat_12.0', 'navstat_13.0',
+    'navstat_14.0', 'navstat_15.0'
     'cog',
     'sog',
     'rot',
@@ -268,6 +257,7 @@ def preprocess(
     df_lat_long = df_train[["time", "vesselId", "latitude", "longitude"]].copy()
     df = one_hot_encode(df, "navstat")
     
+    print("df.columns", df.columns)
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
 
