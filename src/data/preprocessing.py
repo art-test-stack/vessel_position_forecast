@@ -32,7 +32,7 @@ features_input = [
     'navstat_1.0', 'navstat_2.0', 'navstat_3.0', 'navstat_4.0',
     'navstat_5.0', 'navstat_6.0', 'navstat_7.0', 'navstat_8.0',
     'navstat_9.0', 'navstat_11.0', 'navstat_12.0', 'navstat_13.0',
-    'navstat_14.0', 'navstat_15.0'
+    'navstat_14.0', 'navstat_15.0',
     'cog',
     'sog',
     'rot',
