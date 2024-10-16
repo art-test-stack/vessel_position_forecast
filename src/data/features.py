@@ -110,19 +110,18 @@ def one_hot_encode(df: pd.DataFrame, column: str) -> pd.DataFrame:
     Returns:
         - ais_data: pd.DataFrame = ais_data with one-hot encoded `column`
     """
-
-    df_one_hot_encoded = (
+    df[column] = (
         df
         .sort_values(by=['time'])
         .groupby("vesselId")[column]
         .apply(lambda x: x.ffill().bfill())
-        # .reset_index(level=0, drop=True)
-    )
-    # df = pd.get_dummies(df, prefix=column)
-    df = pd.concat(
-        [df, pd.get_dummies(df[column], prefix=column, drop_first=True)], 
-        axis=1
-    )
+        .reset_index(level=0, drop=True)
+        .reindex(df.index)
+    )#.fillna(0)  # Fill remaining NaNs with a default value, e.g., 0
+
+    df_one_hot_encoded = pd.get_dummies(df[column], prefix=column, drop_first=False, dtype='float32')
+
+    df = df.join(df_one_hot_encoded)
     return df
 
 def presequence_data(

@@ -96,13 +96,13 @@ def torch_model_pipeline(
             parallelize_seq=parallelize_seq,
             scaler=scaler
         )
-
+        
         print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
-        X_train = torch.Tensor(X_train.astype(np.float32))
-        y_train = torch.Tensor(y_train.astype(np.float32))
+        X_train = torch.Tensor(X_train)
+        y_train = torch.Tensor(y_train)
 
-        X_val = torch.Tensor(X_val.astype(np.float32))
-        y_val = torch.Tensor(y_val.astype(np.float32))
+        X_val = torch.Tensor(X_val)
+        y_val = torch.Tensor(y_val)
 
         torch.save(X_train, LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"))
         torch.save(y_train, LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"))
