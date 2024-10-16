@@ -257,7 +257,6 @@ def preprocess(
     df_lat_long = df_train[["time", "vesselId", "latitude", "longitude"]].copy()
     df = one_hot_encode(df, "navstat")
     
-    print("df.columns", df.columns)
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
 

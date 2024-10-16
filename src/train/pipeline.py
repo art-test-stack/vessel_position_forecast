@@ -41,18 +41,13 @@ from sklearn.preprocessing import MinMaxScaler
 def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len):
     preds = []
     # diff_lat_pred = []
-    current_sequence = seq[:seq_len].reshape(1,seq_len,19)
-    # current_sequence = last_known[-seq_len:]
+    current_sequence = seq[:seq_len].reshape(1, seq_len, 19)
     for k in range(steps):
-        # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
         x_test = torch.Tensor(current_sequence.astype(np.float32)).to(DEVICE)
         y_pred = model.predict(x_test)[-1,:]
 
         preds.append(y_pred)
-        # diff_long_pred.append(y_pred[-2])
-        # diff_lat_pred.append( y_pred[-1] )
-
-        seq[seq_len+k] = np.array([seq[k+seq_len][:17], *y_pred[:-2]])
+        seq[seq_len+k] = np.concatenate((seq[k+seq_len][:15], y_pred[:4]), axis=None)
         
         current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,19)
 
@@ -73,7 +68,8 @@ def torch_model_pipeline(
         parallelize_seq: bool = False,
         scaler: MinMaxScaler = MinMaxScaler(),
         epochs_tr: int = 200,
-        epochs_ft: int = 500
+        epochs_ft: int = 500,
+        skip_training: bool = False
     ):
     # OPEN NEEDED `*.csv` files
 
@@ -96,7 +92,7 @@ def torch_model_pipeline(
             parallelize_seq=parallelize_seq,
             scaler=scaler
         )
-        
+
         print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
         X_train = torch.Tensor(X_train)
         y_train = torch.Tensor(y_train)
@@ -112,6 +108,8 @@ def torch_model_pipeline(
         joblib.dump(scaler, LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
         test_set.to_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
 
+        df_lat_long.to_csv(LAST_PREPROCESS_FOLDER.joinpath("df_lat_long.csv"))
+
     else:
         try:
             
@@ -122,9 +120,10 @@ def torch_model_pipeline(
 
             scaler = joblib.load(LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
             test_set = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
-
+            df_lat_long = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("df_lat_long.csv"))
+            assert X_train.shape[1] == seq_len, "Sequence length mismatch"
         except:
-            print(f"ERROR: File missing in {str(LAST_PREPROCESS_FOLDER)}. Now run preprocessing...")
+            print(f"ERROR: File missing in {str(LAST_PREPROCESS_FOLDER)}. I will do preprocessing anyway...")
             return torch_model_pipeline(
                 model=model,
                 do_preprocess=True,
@@ -163,16 +162,17 @@ def torch_model_pipeline(
     y_train = y_train.reshape(-1, 6)
     y_val = y_val.reshape(-1, 6)
 
-    print("Start training...")
-    trainer.fit(
-        X=X_train,
-        y=y_train,
-        # X_val=X_val,
-        # y_val=y_val,
-        epochs=epochs_tr,
-        eval_on_test=True,
-        k_folds=0,
-    )
+    if not skip_training:
+        print("Start training...")
+        trainer.fit(
+            X=X_train,
+            y=y_train,
+            # X_val=X_val,
+            # y_val=y_val,
+            epochs=epochs_tr,
+            eval_on_test=True,
+            k_folds=0,
+        )
 
     score = trainer.eval(X_val, y_val)
     import numpy as np
@@ -186,7 +186,6 @@ def torch_model_pipeline(
             print("Score ???")
 
 
-    print("Start fine tuning...")
     model = trainer.best_model
     optimizer = opt(model.parameters(), lr=lr/10)
     X = torch.cat([X_train, X_val], dim=0)
@@ -197,16 +196,18 @@ def torch_model_pipeline(
         optimizer=optimizer,
         device=DEVICE
     )
-    final_trainer.fit(
-        X=X,
-        y=y,
-        # X_val=X_val,
-        # y_val=y_val,
-        epochs=epochs_ft,
-        eval_on_test=True,
-        k_folds=0,
-        split_ratio=.95
-    )
+    if not skip_training:
+        print("Start fine tuning...")
+        final_trainer.fit(
+            X=X,
+            y=y,
+            # X_val=X_val,
+            # y_val=y_val,
+            epochs=epochs_ft,
+            eval_on_test=True,
+            k_folds=0,
+            split_ratio=.95
+        )
     # PREDICTION STEP
 
     grouped_test = test_set.groupby("vesselId")
@@ -226,8 +227,8 @@ def torch_model_pipeline(
 
         preds = iterative_forecast_on_long_lat_diff(
             last_known_features, 
-            last_vessel_long, 
-            last_vessel_lat, 
+            # last_vessel_long, 
+            # last_vessel_lat, 
             trainer, 
             forecast_steps, 
             sequence_length
@@ -235,7 +236,7 @@ def torch_model_pipeline(
         
         group.loc[group.index[seq_len:],['cog', 'sog', 'rot', 'heading', 'long_diff', 'lat_diff']] = preds
         
-        group[features_input] = scaler.inverse_transform(group[features_input])
+        group[features_to_scale] = scaler.inverse_transform(group[features_to_scale])
 
         group.loc[group.index[seq_len:],'longitude'] = group.loc[group.index[seq_len:], 'long_diff'].values.cumsum() + last_vessel_long # group.loc[group.index[seq_len -1],'longitude']
         group.loc[group.index[seq_len:],'latitude'] = group.loc[group.index[seq_len:], 'lat_diff'].values.cumsum() + last_vessel_lat # group.loc[group.index[seq_len -1],'latitude']

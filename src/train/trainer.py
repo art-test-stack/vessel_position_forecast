@@ -47,7 +47,7 @@ class Trainer:
         self.metric = metric or loss
         self.optimizer = optimizer or torch.optim.AdamW(params=model.parameters())
         self.device = device
-        self.best_model = None
+        self.best_model = model
         self.best_score = None
         self.batch_size = batch_size  # Add batch size for mini-batch training
         self.model.to(device)

@@ -124,6 +124,57 @@ def one_hot_encode(df: pd.DataFrame, column: str) -> pd.DataFrame:
     df = df.join(df_one_hot_encoded)
     return df
 
+def create_heading_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    CREATE `heading_cos` AND `heading_sin` FEATURES
+
+    Args:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+    Returns:
+        - ais_data: pd.DataFrame = ais_data with `heading_cos` and `heading_sin` features
+    """
+    
+    # Replace 511 (not available) with NaN
+    df['heading'] = df['heading'].replace(511, pd.NA)
+    
+    # Calculate the cosine and sine of the heading
+    df['heading_cos'] = (df['heading'] % 360).apply(lambda x: 0 if pd.isna(x) else np.cos(np.deg2rad(x)))
+    df['heading_sin'] = (df['heading'] % 360).apply(lambda x: 0 if pd.isna(x) else np.sin(np.deg2rad(x)))
+    df.drop(columns=['heading'], inplace=True)
+    return df
+
+def create_rot_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    CREATE `rot_calculated` AND `rot_category` FEATURES
+
+    Args:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+    Returns:
+        - ais_data: pd.DataFrame = ais_data with `rot_calculated` and `rot_category` features
+    """
+    
+    # Calculate the ROT in degrees per minute
+    df['rot_calculated'] = 4.733 * (df['rot'].abs() ** 0.5) * df['rot'].apply(lambda x: 1 if x >= 0 else -1)
+    
+    # Categorize the ROT values
+    def categorize_rot(rot):
+        if rot == -128:
+            return 'no_info'
+        elif rot == 127:
+            return 'right_more_than_5_deg_per_30s'
+        elif rot == -127:
+            return 'left_more_than_5_deg_per_30s'
+        elif rot > 0:
+            return 'turning_right'
+        elif rot < 0:
+            return 'turning_left'
+        else:
+            return 'no_turn'
+    
+    df['rot_category'] = df['rot'].apply(categorize_rot)
+    
+    return df
+
 def presequence_data(
         df: pd.DataFrame, 
         vessel_ids: List[str],

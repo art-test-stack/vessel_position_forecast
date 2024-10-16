@@ -15,7 +15,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 if __name__ == "__main__":
     seq_len = 32
-    do_preprocess = True
+    do_preprocess = False
 
     model = FFNModel(seq_len=seq_len, num_features=19)
 
@@ -32,6 +32,7 @@ if __name__ == "__main__":
         to_torch = True,
         parallelize_seq = True,
         scaler = StandardScaler(),
-        epochs_tr=200,
-        epochs_ft=200
+        epochs_tr=1,
+        epochs_ft=1,
+        skip_training=False
     )
