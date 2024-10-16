@@ -1,7 +1,7 @@
 from settings import *
 from utils import *
 
-from src.data.preprocessing import preprocess, features_input
+from src.data.preprocessing_v0 import preprocess, features_input
 
 from src.model.transformer_enc import EncoderModel
 from src.train.trainer import Trainer

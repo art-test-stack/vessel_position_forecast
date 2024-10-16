@@ -11,24 +11,24 @@ import joblib
 
 import torch
 from torch import nn
+# from torch.nn.parallel import DistributedDataParallel as DDP
 
-from typing import Dict, Union, Callable
+from typing import Callable
 
-from datetime import datetime
 import uuid
 from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
 
 
 
-def iterative_forecast(seq, model, steps, sequence_length):
+def iterative_forecast(seq, model, steps, seq_len):
     predicted = []
-    current_sequence = seq[:sequence_length].reshape(1,sequence_length,7)
-    # current_sequence = last_known[-sequence_length:]
+    current_sequence = seq[:seq_len].reshape(1,seq_len,7)
+    # current_sequence = last_known[-seq_len:]
     for k in range(steps):
-        # next_pred = model.predict(current_sequence.reshape(1, sequence_length, -1))[0]
+        # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
         x_test = torch.Tensor(current_sequence).to(DEVICE)
-        y_pred = model.predict(x_test)[0,0,:]
+        y_pred = model.predict(x_test)[-1,:]
 
         predicted.append(y_pred)
         seq[seq_len+k] = np.array([seq[k+seq_len][0], *y_pred])
@@ -38,7 +38,22 @@ def iterative_forecast(seq, model, steps, sequence_length):
     return predicted
 
 
-def main(seq_len, do_preprocess):
+def torch_model_pipeline(
+        model: nn.Module,
+        do_preprocess: bool = True,
+        loss: Callable = nn.MSELoss(),
+        opt: torch.optim.Optimizer = torch.optim.Adam,
+        lr: float = 5e-4,
+        seq_len: int = 32, 
+        seq_type = "n_in_1_out",
+        seq_len_out: int = 1,
+        verbose: bool = True,
+        to_torch: bool = True,
+        parallelize_seq: bool = False,
+        scaler: MinMaxScaler = MinMaxScaler(),
+        epochs_tr: int = 200,
+        epochs_ft: int = 500
+    ):
     # OPEN NEEDED `*.csv` files
 
     ais_train = pd.read_csv(AIS_TRAIN, sep='|')
@@ -49,18 +64,19 @@ def main(seq_len, do_preprocess):
 
     if do_preprocess:
 
-        X_train, X_val, y_train, y_val, test_set, scaler = preprocess(
+        X_train, X_val, y_train, y_val, test_set, scaler, dropped_vessel_ids = preprocess(
             ais_train, 
             ais_test,
-            seq_type="n_in_1_out",
+            seq_type=seq_type,
             seq_len=seq_len,
-            seq_len_out=1,
-            verbose=True,
-            to_torch=True,
-            parallelize_seq = False,
-            # scaler=MinMaxScaler()
+            seq_len_out=seq_len_out,
+            verbose=verbose,
+            to_torch=to_torch,
+            parallelize_seq=parallelize_seq,
+            scaler=scaler
         )
 
+        print(f"Preprocessing ok... Number of vessels dropped: {len(dropped_vessel_ids)}")
         X_train = torch.Tensor(X_train)
         y_train = torch.Tensor(y_train)
 
@@ -88,60 +104,33 @@ def main(seq_len, do_preprocess):
 
         except:
             print(f"ERROR: File missing in {str(LAST_PREPROCESS_FOLDER)}. Now run preprocessing...")
-            return main(seq_len, do_preprocess)
-        
+            return torch_model_pipeline(
+                model=model,
+                do_preprocess=True,
+                loss=loss,
+                opt=opt,
+                lr=lr,
+                seq_len=seq_len, 
+                seq_type=seq_type,
+                seq_len_out=seq_len_out,
+                verbose=verbose,
+                to_torch=to_torch,
+                parallelize_seq=parallelize_seq,
+                scaler=scaler
+            )
 
-    dim_ffn = 126
-    d_model = 32 * 2
-    activation_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.SiLU()
 
-    transformer_decoder_params = {
-        "d_model": d_model,
-        "nhead": 8,
-        # "num_encoder_layers": 6,
-        # "num_decoder_layers": 2,
-        "dim_feedforward": dim_ffn,
-        "dropout": 0.1,
-        "activation": activation_dec,
-        "layer_norm_eps": 0.00001,
-        "batch_first": True,
-        "norm_first": False,
-        # "bias": True,
-        "device": DEVICE,
-    }
-    
-    class DecoderModel(nn.Module):
-        def __init__(
-                self,
-                decoder_params: Dict[int,Union[int, float, bool]] = transformer_decoder_params, 
-                num_features: int = 7, 
-                num_outputs: int = 6, 
-                num_layers: int = 2,
-                act_out: nn.Module | None = None
-            ) -> None:
-            super().__init__()
-            self.emb_layer = nn.Linear(num_features, d_model)
-            dec_layer = nn.TransformerDecoderLayer(**decoder_params)
-            self.model = nn.TransformerDecoder(dec_layer, num_layers=num_layers)
-            self.ffn = nn.Linear(d_model, num_outputs)
-            self.act_out = act_out # nn.Sigmoid()
-            
-        def forward(self, x):
-            len_b, len_s, _ = x.shape
-            emb = self.emb_layer(x)
-            out = self.model(emb, emb)
-            out = out[:, -1, :].view(len_b, 1, -1)
-            
-            if self.act_out:
-                return self.act_out(self.ffn(out))
-            return self.ffn(out)
+    # if torch.cuda.is_available():
+    #     device = "cuda:0"
+    #     if torch.cuda.device_count() > 1:
+    #         model = DDP(model)
 
-    model = DecoderModel()
-
+    model.to(DEVICE)
+    optimizer = opt(model.parameters(), lr=lr)
     trainer = Trainer(
         model=model,
-        loss=nn.MSELoss(),
-        optimizer=torch.optim.AdamW(params=model.parameters(), lr=5e-5),
+        loss=loss,
+        optimizer=optimizer,
         device=DEVICE,
     )
     X_train = torch.Tensor(X_train).to(DEVICE)
@@ -150,12 +139,16 @@ def main(seq_len, do_preprocess):
     X_val = torch.Tensor(X_val).to(DEVICE)
     y_val = torch.Tensor(y_val).to(DEVICE)
 
+    y_train = y_train.reshape(-1, 6)
+    y_val = y_val.reshape(-1, 6)
+
+    print("Start training...")
     trainer.fit(
         X=X_train,
         y=y_train,
         # X_val=X_val,
         # y_val=y_val,
-        epochs=2000,
+        epochs=epochs_tr,
         eval_on_test=True,
         k_folds=0,
     )
@@ -171,7 +164,28 @@ def main(seq_len, do_preprocess):
         except:
             print("Score ???")
 
-    
+
+    print("Start fine tuning...")
+    model = trainer.best_model
+    optimizer = opt(model.parameters(), lr=lr/10)
+    X = torch.cat([X_train, X_val], dim=0)
+    y = torch.cat([y_train, y_val], dim=0)
+    final_trainer = Trainer(
+        model=model,
+        loss=loss,
+        optimizer=optimizer,
+        device=DEVICE
+    )
+    final_trainer.fit(
+        X=X,
+        y=y,
+        # X_val=X_val,
+        # y_val=y_val,
+        epochs=epochs_ft,
+        eval_on_test=True,
+        k_folds=0,
+        split_ratio=.95
+    )
     # PREDICTION STEP
 
     grouped_test = test_set.groupby("vesselId")
@@ -220,9 +234,6 @@ def main(seq_len, do_preprocess):
             print("Error register file")
             submit(forecast)
 
+    print("res describe")
+    print(res.describe())
     submit(res)
-
-if __name__ == "__main__":
-    seq_len = 12
-    do_preprocess = True
-    main(seq_len, do_preprocess)
