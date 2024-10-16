@@ -14,10 +14,11 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 if __name__ == "__main__":
-    seq_len = 32
+    seq_len = 3
     do_preprocess = False
 
-    model = FFNModel(seq_len=seq_len, num_features=19)
+    # TODO: ADD DROPOUT ARG
+    model = FFNModel(seq_len=seq_len, num_features=19, dropout=0.3)
 
     torch_model_pipeline(
         model = model,
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         to_torch = True,
         parallelize_seq = True,
         scaler = StandardScaler(),
-        epochs_tr=1,
-        epochs_ft=1,
+        epochs_tr=500,
+        epochs_ft=500,
         skip_training=False
     )
