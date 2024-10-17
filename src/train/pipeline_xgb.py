@@ -152,6 +152,7 @@ def xgb_model_pipeline(
         'n_estimators': [ 3000, 4000 ],
         'min_child_weight': [3, 5, 7],
         'colsample_bytree': [.7, 0.6, .5],
+        'early_stopping_rounds': [50]
     }
 
     xgb_reg = xgb.XGBRegressor(
@@ -176,7 +177,7 @@ def xgb_model_pipeline(
         X_train,
         y_train,
         eval_set=[(X_train, y_train), (X_val, y_val)],
-        early_stopping_rounds=50,
+        # early_stopping_rounds=50,
         verbose=True
     )
     # model = MultiOutputRegressor(xgb_reg)
