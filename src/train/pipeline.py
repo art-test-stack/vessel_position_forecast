@@ -21,35 +21,18 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 
-# def iterative_forecast(seq, model, steps, seq_len):
-#     predicted = []
-#     current_sequence = seq[:seq_len].reshape(1,seq_len,7)
-#     # current_sequence = last_known[-seq_len:]
-#     for k in range(steps):
-#         # next_pred = model.predict(current_sequence.reshape(1, seq_len, -1))[0]
-#         x_test = torch.Tensor(current_sequence).to(DEVICE)
-#         y_pred = model.predict(x_test)[-1,:]
-
-#         predicted.append(y_pred)
-#         seq[seq_len+k] = np.array([seq[k+seq_len][0], *y_pred])
-        
-#         current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,7)
-
-#     return predicted
-
-
-def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len):
+def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len, dim_in, dim_out):
     preds = []
     # diff_lat_pred = []
-    current_sequence = seq[:seq_len].reshape(1, seq_len, 19)
+    current_sequence = seq[:seq_len].reshape(1, seq_len, dim_in)
     for k in range(steps):
         x_test = torch.Tensor(current_sequence.astype(np.float32)).to(DEVICE)
         y_pred = model.predict(x_test)[-1,:]
 
         preds.append(y_pred)
-        seq[seq_len+k] = np.concatenate((seq[k+seq_len][:15], y_pred[:4]), axis=None)
+        seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_out + 2], y_pred[:-2]), axis=None)
         
-        current_sequence = seq[k+1:k+1+seq_len].reshape(1,seq_len,19)
+        current_sequence = seq[k+1:k+1+seq_len].reshape(1, seq_len, dim_in)
 
     return preds
 
@@ -69,7 +52,9 @@ def torch_model_pipeline(
         scaler: MinMaxScaler = MinMaxScaler(),
         epochs_tr: int = 200,
         epochs_ft: int = 500,
-        skip_training: bool = False
+        skip_training: bool = False,
+        preprocess_folder: Path | str = LAST_PREPROCESS_FOLDER,
+        dropout: float = .4
     ):
     # OPEN NEEDED `*.csv` files
 
@@ -100,30 +85,31 @@ def torch_model_pipeline(
         X_val = torch.Tensor(X_val)
         y_val = torch.Tensor(y_val)
 
-        torch.save(X_train, LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"))
-        torch.save(y_train, LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"))
-        torch.save(X_val, LAST_PREPROCESS_FOLDER.joinpath("X_val.pt"))
-        torch.save(y_val, LAST_PREPROCESS_FOLDER.joinpath("y_val.pt"))
+        torch.save(X_train, preprocess_folder.joinpath("X_train.pt"))
+        torch.save(y_train, preprocess_folder.joinpath("y_train.pt"))
+        torch.save(X_val, preprocess_folder.joinpath("X_val.pt"))
+        torch.save(y_val, preprocess_folder.joinpath("y_val.pt"))
 
-        joblib.dump(scaler, LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
-        test_set.to_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
+        joblib.dump(scaler, preprocess_folder.joinpath("scaler")) 
+        test_set.to_csv(preprocess_folder.joinpath("test_set.csv"))
 
-        df_lat_long.to_csv(LAST_PREPROCESS_FOLDER.joinpath("df_lat_long.csv"))
+        df_lat_long.to_csv(preprocess_folder.joinpath("df_lat_long.csv"))
 
     else:
         try:
             
-            X_train = torch.load(LAST_PREPROCESS_FOLDER.joinpath("X_train.pt"), weights_only=True)
-            y_train = torch.load(LAST_PREPROCESS_FOLDER.joinpath("y_train.pt"), weights_only=True)
-            X_val = torch.load(LAST_PREPROCESS_FOLDER.joinpath("X_val.pt"), weights_only=True)
-            y_val = torch.load(LAST_PREPROCESS_FOLDER.joinpath("y_val.pt"), weights_only=True)
+            X_train = torch.load(preprocess_folder.joinpath("X_train.pt"), weights_only=True)
+            y_train = torch.load(preprocess_folder.joinpath("y_train.pt"), weights_only=True)
+            X_val = torch.load(preprocess_folder.joinpath("X_val.pt"), weights_only=True)
+            y_val = torch.load(preprocess_folder.joinpath("y_val.pt"), weights_only=True)
 
-            scaler = joblib.load(LAST_PREPROCESS_FOLDER.joinpath("scaler")) 
-            test_set = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("test_set.csv"))
-            df_lat_long = pd.read_csv(LAST_PREPROCESS_FOLDER.joinpath("df_lat_long.csv"))
+            scaler = joblib.load(preprocess_folder.joinpath("scaler")) 
+            test_set = pd.read_csv(preprocess_folder.joinpath("test_set.csv"))
+            df_lat_long = pd.read_csv(preprocess_folder.joinpath("df_lat_long.csv"))
             assert X_train.shape[1] == seq_len, "Sequence length mismatch"
+
         except:
-            print(f"ERROR: File missing in {str(LAST_PREPROCESS_FOLDER)}. I will do preprocessing anyway...")
+            print(f"ERROR: File missing in {str(preprocess_folder)}. I will do preprocessing anyway...")
             return torch_model_pipeline(
                 model=model,
                 do_preprocess=True,
@@ -140,11 +126,14 @@ def torch_model_pipeline(
             )
 
 
+    dim_in = X_train.shape[-1]
+    dim_out = y_train.shape[-1]
     # if torch.cuda.is_available():
     #     device = "cuda:0"
     #     if torch.cuda.device_count() > 1:
     #         model = DDP(model)
 
+    model = model(num_features=dim_in, dim_out=dim_out, seq_len=seq_len, dropout=dropout)
     model.to(DEVICE)
     optimizer = opt(model.parameters(), lr=lr)
     trainer = Trainer(
@@ -159,8 +148,8 @@ def torch_model_pipeline(
     X_val = torch.Tensor(X_val).to(DEVICE)
     y_val = torch.Tensor(y_val).to(DEVICE)
 
-    y_train = y_train.reshape(-1, 6)
-    y_val = y_val.reshape(-1, 6)
+    y_train = y_train.reshape(-1, dim_out)
+    y_val = y_val.reshape(-1, dim_out)
 
     if not skip_training:
         print("Start training...")
@@ -231,7 +220,9 @@ def torch_model_pipeline(
             # last_vessel_lat, 
             trainer, 
             forecast_steps, 
-            sequence_length
+            sequence_length,
+            dim_in, 
+            dim_out
         )
         
         group.loc[group.index[seq_len:],['cog', 'sog', 'rot', 'heading', 'long_diff', 'lat_diff']] = preds
@@ -240,12 +231,14 @@ def torch_model_pipeline(
 
         group.loc[group.index[seq_len:],'longitude'] = group.loc[group.index[seq_len:], 'long_diff'].values.cumsum() + last_vessel_long # group.loc[group.index[seq_len -1],'longitude']
         group.loc[group.index[seq_len:],'latitude'] = group.loc[group.index[seq_len:], 'lat_diff'].values.cumsum() + last_vessel_lat # group.loc[group.index[seq_len -1],'latitude']
+        
         # group.loc[group.index[seq_len:],'latitude'] = lat_pred
         
         predictions.append(group.copy())
 
     df_preds = pd.concat(predictions, ignore_index=True)
-
+    df_preds['longitude'] = df_preds['longitude'].apply(lambda x: (x + 180) % 360 - 180)
+    df_preds['latitude'] = df_preds['latitude'].apply(lambda x: (x + 90) % 180 - 90)
     # SUBMIT RESULT
     
     res = df_preds[["ID","longitude","latitude"]].sort_values("ID")[:51739]

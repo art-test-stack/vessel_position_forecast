@@ -1,4 +1,4 @@
-from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature, one_hot_encode
+from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature, one_hot_encode, create_heading_features
 
 import concurrent.futures
 
@@ -36,7 +36,9 @@ features_input = [
     'cog',
     'sog',
     'rot',
-    'heading',
+    # 'heading',
+    'heading_cos',
+    'heading_sin',
     # 'long_diff',
     # 'lat_diff',
 ]
@@ -49,7 +51,9 @@ features_to_scale = [
     'cog',
     'sog',
     'rot',
-    'heading',
+    # 'heading',
+    'heading_cos',
+    'heading_sin',
     'long_diff',
     'lat_diff',
 ]
@@ -60,7 +64,9 @@ features_output = [
     'cog',
     'sog',
     'rot',
-    'heading',
+    # 'heading',
+    'heading_cos',
+    'heading_sin',
     'long_diff',
     'lat_diff',
 ]
@@ -259,7 +265,7 @@ def preprocess(
     
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
-
+    df = create_heading_features(df)
     train_set, test_set = split_train_test_sets(df)
 
     # TODO: Look for better way to normalize

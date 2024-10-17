@@ -1,6 +1,6 @@
 import pandas as pd
 from dataclasses import dataclass
-
+import numpy as np
 from typing import Union, List
 
 

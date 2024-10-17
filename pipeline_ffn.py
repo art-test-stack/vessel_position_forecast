@@ -17,11 +17,16 @@ if __name__ == "__main__":
     seq_len = 3
     do_preprocess = False
 
+    dim_in = 20
+    dim_out = 7
+    preprocess_file = Path("data/preprocessed_with_sincos_heading_seq_len_3/")
+    if not preprocess_file.exists():
+        preprocess_file.mkdir()
+        do_preprocess = True
     # TODO: ADD DROPOUT ARG
-    model = FFNModel(seq_len=seq_len, num_features=19, dropout=0.3)
 
     torch_model_pipeline(
-        model = model,
+        model = FFNModel,
         do_preprocess = do_preprocess,
         loss = nn.MSELoss(),
         opt = torch.optim.AdamW,
@@ -35,5 +40,7 @@ if __name__ == "__main__":
         scaler = StandardScaler(),
         epochs_tr=500,
         epochs_ft=500,
-        skip_training=False
+        skip_training=True,
+        dropout=.4,
+        preprocess_folder = preprocess_file
     )
