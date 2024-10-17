@@ -138,8 +138,8 @@ def create_heading_features(df: pd.DataFrame) -> pd.DataFrame:
     df['heading'] = df['heading'].replace(511, pd.NA)
     
     # Calculate the cosine and sine of the heading
-    df['heading_cos'] = (df['heading'] % 360).apply(lambda x: 0 if pd.isna(x) else np.cos(np.deg2rad(x)))
-    df['heading_sin'] = (df['heading'] % 360).apply(lambda x: 0 if pd.isna(x) else np.sin(np.deg2rad(x)))
+    df['heading_cos'] = df['heading'].apply(lambda x: 0 if pd.isna(x) else np.cos(np.deg2rad(x)))
+    df['heading_sin'] = df['heading'].apply(lambda x: 0 if pd.isna(x) else np.sin(np.deg2rad(x)))
     df.drop(columns=['heading'], inplace=True)
     return df
 

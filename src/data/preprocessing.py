@@ -52,8 +52,8 @@ features_to_scale = [
     'sog',
     'rot',
     # 'heading',
-    'heading_cos',
-    'heading_sin',
+    # 'heading_cos',
+    # 'heading_sin',
     'long_diff',
     'lat_diff',
 ]
@@ -266,6 +266,7 @@ def preprocess(
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
     df = create_heading_features(df)
+
     train_set, test_set = split_train_test_sets(df)
 
     # TODO: Look for better way to normalize
