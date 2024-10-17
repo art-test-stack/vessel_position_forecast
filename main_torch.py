@@ -28,7 +28,7 @@ if __name__ == "__main__":
     torch_model_pipeline(
         model = FFNModel,
         do_preprocess = do_preprocess,
-        loss = nn.MSELoss(),
+        loss = nn.MSELoss(reduction="sum"),
         opt = torch.optim.AdamW,
         lr = 5e-6,
         seq_len = seq_len, 

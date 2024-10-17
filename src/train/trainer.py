@@ -18,11 +18,36 @@ import uuid
 from typing import Callable, Tuple
 from copy import deepcopy
 
+
+class EarlyStopping:
+    def __init__(self, patience=5, min_delta=0.05):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+        self.save_model = True
+
+    def __call__(self, test_loss):
+        self.save_model = False
+        if self.best_loss is None:
+            self.best_loss = test_loss
+            self.save_model = True
+        elif test_loss < self.best_loss - self.min_delta:
+            self.best_loss = test_loss
+            self.counter = 0
+            self.save_model = True
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+
+
 class Trainer:
     def __init__(
             self, 
             model: nn.Module, # TODO: Handdle XGBoost models
-            loss: nn.Module = nn.MSELoss(), 
+            loss: nn.Module = nn.MSELoss(reduction="sum"), 
             metric = None, 
             optimizer: torch.optim.Optimizer | None = None, 
             device: str | torch.device = 'cpu', 
@@ -143,25 +168,6 @@ class Trainer:
         
         return train_loader, val_loader
     
-        # model.train()
-        # for epoch in range(1, 5):
-        # with tqdm(train_loader, unit="batch") as tepoch:
-        #     for data, target in tepoch:
-        #         tepoch.set_description(f"Epoch {epoch}")
-
-        #         data, target = data.to(device), target.to(device)
-        #         optimizer.zero_grad()
-        #         output = model(data)
-        #         predictions = output.argmax(dim=1, keepdim=True).squeeze()
-        #         loss = F.nll_loss(output, target)
-        #         correct = (predictions == target).sum().item()
-        #         accuracy = correct / batch_size
-
-        #         loss.backward()
-        #         optimizer.step()
-                
-        #         tepoch.set_postfix(loss=loss.item(), accuracy=100. * accuracy)
-        #         sleep(0.1)
 
     def _train_nn(
             self, 
@@ -180,35 +186,53 @@ class Trainer:
             epochs: Number of epochs for training
             eval_on_test: Whether to evaluate during training
         """
-        for epoch in tqdm(range(epochs), colour="red"):
-            self.model.train()
-            running_loss = 0.0
-            for inputs, targets in train_loader:
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                outputs = self.model(inputs)
-                loss = self.loss(outputs, targets)
+        early_stopping = EarlyStopping()
 
-                self.optimizer.zero_grad()
-                loss.backward()
+        with tqdm(range(epochs), unit="epoch", colour="red") as tepoch:
+            for epoch in range(epochs):
+                self.model.train()
+                running_loss = 0.0
+                for inputs, targets in train_loader:
+                    inputs, targets = inputs.to(self.device), targets.to(self.device)
+                    outputs = self.model(inputs)
+                    loss = self.loss(outputs, targets)
 
-                if self.clip_grad:
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
-                self.optimizer.step()
+                    self.optimizer.zero_grad()
+                    loss.backward()
+
+                    if self.clip_grad:
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
+                    self.optimizer.step()
+                    
+                    running_loss += loss.item()
+
+                avg_loss = running_loss / len(train_loader.dataset)
+                self.losses.append(avg_loss)
+                # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+
+                if eval_on_test and val_loader and epoch % self.eval_step == 0:
+                    val_loss = self._evaluate_nn(val_loader)
+                    self._update_best_model(val_loss)
                 
-                running_loss += loss.item() * len(inputs)
+                tepoch.set_postfix(
+                    loss = self.losses[-1],
+                    val_loss = self.val_losses[-1],
+                )
+                early_stopping(self.val_losses[-1])
 
-            avg_loss = running_loss / len(train_loader)
-            self.losses.append(avg_loss)
-            # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
+                if early_stopping.save_model:
+                    self.save_model(best = True)
 
-            if eval_on_test and val_loader and epoch % self.eval_step == 0:
-                val_loss = self._evaluate_nn(val_loader)
-                self._update_best_model(val_loss)
-            
-        if eval_on_test:
-            print(f"Best model on val score: {self.best_score}")
-        
-        self.save_model(best = True)
+                if early_stopping.early_stop:
+                    print(f"Early stopping at epoch {epoch}")
+                    break
+
+                tepoch.update(1)
+
+            if eval_on_test:
+                print(f"Best model on val score: {self.best_score}")
+
+
         self.plot_losses()
 
 
@@ -228,9 +252,9 @@ class Trainer:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
                 loss = self.metric(outputs, targets)
-                running_val_loss += loss.item() * len(inputs)
+                running_val_loss += loss.item()
 
-        avg_val_loss = running_val_loss / len(val_loader)
+        avg_val_loss = running_val_loss / len(val_loader.dataset)
         self.val_losses.append(avg_val_loss)
         # print(f"Validation Loss: {avg_val_loss:.4f}")
         return avg_val_loss
@@ -298,7 +322,7 @@ class Trainer:
 
         model = self.best_model if best else self.model
 
-        torch.save(model, MODEL_FOLDER.joinpath(name))
+        torch.save(model.state_dict(), MODEL_FOLDER.joinpath(name))
         print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
 
         # LOAD MODEL

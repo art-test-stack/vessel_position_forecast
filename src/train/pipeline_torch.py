@@ -40,7 +40,7 @@ def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len, dim_in, dim_
 def torch_model_pipeline(
         model: nn.Module,
         do_preprocess: bool = True,
-        loss: Callable = nn.MSELoss(),
+        loss: Callable = nn.MSELoss(reduction="sum"),
         opt: torch.optim.Optimizer = torch.optim.Adam,
         lr: float = 5e-4,
         seq_len: int = 32, 

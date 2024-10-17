@@ -1,7 +1,7 @@
 from settings import *
 from utils import *
 
-from src.data.preprocessing import preprocess, features_to_scale, features_input
+from src.data.preprocessing import preprocess, features_to_scale, features_input, features_output
 
 # from src.train.trainer import Trainer
 
@@ -229,7 +229,7 @@ def xgb_model_pipeline(
             dim_out
         )
         
-        group.loc[group.index[seq_len:],['cog', 'sog', 'rot', 'heading', 'long_diff', 'lat_diff']] = preds
+        group.loc[group.index[seq_len:],features_output] = preds
         
         group[features_to_scale] = scaler.inverse_transform(group[features_to_scale])
 
