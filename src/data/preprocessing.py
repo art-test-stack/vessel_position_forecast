@@ -281,7 +281,10 @@ def preprocess(
     if verbose:
         print(f"Create training sequences on mode '{seq_type}'...")
     if seq_type == "basic":
-        pass
+        X = train_set.iloc[:-1][features_input]
+        y = train_set.iloc[1:][features_output]
+        index = None
+        dropped_vessel_ids = []
 
     elif seq_type == "n_in_1_out":
         X, y, index, dropped_vessel_ids = make_sequences_n_in_m_out(train_set, seq_len_in=seq_len, seq_len_out=1, verbose=verbose, parallelize=parallelize_seq)
