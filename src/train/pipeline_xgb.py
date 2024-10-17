@@ -21,6 +21,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, learning_curve, train_test_split
 
 
 def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len, dim_in, dim_out):
@@ -142,32 +143,90 @@ def xgb_model_pipeline(
     y_train = y_train.numpy() if to_torch else y_train
     y_val = y_val.numpy() if to_torch else y_val
 
+    params_grid = {
+        'n_estimators': [2000, 3000, 3500],
+        'gamma': [0.5, 1, 5],
+        'subsample': [0.6, 1.0],
+        'max_depth': [4, 5],
+        'eta': [ 0.005, 0.01, 0.05],
+        'n_estimators': [ 3000, 4000 ],
+        'min_child_weight': [3, 5, 7],
+        'colsample_bytree': [.7, 0.6, .5],
+    }
+
     xgb_reg = xgb.XGBRegressor(
         **model_params,
         eval_metric=mean_absolute_error,
         )
-
-    multi_model = MultiOutputRegressor(xgb_reg)
+    grid_search = GridSearchCV(
+        xgb_reg,
+        param_grid=params_grid,
+        cv=5,
+        n_jobs=-1,
+        verbose=1,
+        scoring='neg_mean_squared_error'
+    )
 
     X_train = X_train.reshape(-1, dim_in * seq_len)
     X_val = X_val.reshape(-1, dim_in * seq_len)
     y_train = y_train.reshape(-1, dim_out)
     y_val = y_val.reshape(-1, dim_out)
 
-    fit_params = {
-        "eval_set": [(X_train, y_train), (X_val, y_val)],
-        # "eval_metric": ['mae', 'mse'],
-        "verbose": True
-    }
+    grid_search.fit(
+        X_train,
+        y_train,
+        eval_set=[(X_train, y_train), (X_val, y_val)],
+        early_stopping_rounds=50,
+        verbose=True
+    )
+    # model = MultiOutputRegressor(xgb_reg)
+
+
+    # fit_params = {
+    #     "eval_set": [(X_train, y_train), (X_val, y_val)],
+    #     # "eval_metric": ['mae', 'mse'],
+    #     "verbose": True
+    # }
+    # if not skip_training:
+    #     print("Start training...")
+    #     model.fit(
+    #         X_train,
+    #         y_train,
+    #         # **fit_params,
+    #     )
+
+    eval_metric = "rmse"
+
+    results = grid_search.evals_result()
+    train_errors = results['validation_0'][eval_metric]
+    test_errors = results['validation_1'][eval_metric]
+
+    import matplotlib.pyplot as plt
+    
+    fig = plt.figure()
+    plt.plot(train_errors, label='Train')
+    plt.plot(test_errors, label='Test')
+    plt.xlabel('Boosting Rounds')
+    plt.ylabel(eval_metric)
+    plt.legend()
+    plt.title('Learning Curves')
+    plt.savefig(f"{str(uuid.uuid4())}.png")
+    plt.close(fig)
+
+    model = grid_search.best_estimator_
+    print("Best model params:", grid_search.best_params_)
+    score = model.score(X_val, y_val)
+
     if not skip_training:
         print("Start training...")
-        multi_model.fit(
+        model.fit(
             X_train,
             y_train,
-            # **fit_params,
+            eval_set=[(X_train, y_train), (X_val, y_val)],
+            early_stopping_rounds=50,
+            verbose=True
         )
 
-    score = multi_model.score(X_val, y_val)
     import numpy as np
 
     try:
@@ -222,7 +281,7 @@ def xgb_model_pipeline(
             last_known_features, 
             # last_vessel_long, 
             # last_vessel_lat, 
-            multi_model, 
+            model, 
             forecast_steps, 
             sequence_length,
             dim_in, 
