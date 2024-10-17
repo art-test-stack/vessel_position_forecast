@@ -20,7 +20,7 @@ from copy import deepcopy
 
 
 class EarlyStopping:
-    def __init__(self, patience=5, min_delta=0.05):
+    def __init__(self, patience=40, min_delta=5e-4):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -189,6 +189,7 @@ class Trainer:
         early_stopping = EarlyStopping()
 
         with tqdm(range(epochs), unit="epoch", colour="red") as tepoch:
+            # tepoch.
             for epoch in range(epochs):
                 self.model.train()
                 running_loss = 0.0
@@ -215,23 +216,22 @@ class Trainer:
                     self._update_best_model(val_loss)
                 
                 tepoch.set_postfix(
-                    loss = self.losses[-1],
-                    val_loss = self.val_losses[-1],
+                    loss = self.losses[-1] if self.losses else "?",
+                    val_loss = self.val_losses[-1] if self.val_losses else "?",
+                    best = self.best_score if self.best_score else "?"
                 )
+                tepoch.update(1)
                 early_stopping(self.val_losses[-1])
 
                 if early_stopping.save_model:
-                    self.save_model(best = True)
+                    self.save_model(best = True, verbose=False)
 
                 if early_stopping.early_stop:
                     print(f"Early stopping at epoch {epoch}")
                     break
 
-                tepoch.update(1)
-
-            if eval_on_test:
-                print(f"Best model on val score: {self.best_score}")
-
+        if eval_on_test:
+            print(f"Best model on val score: {self.best_score}")
 
         self.plot_losses()
 
@@ -314,7 +314,7 @@ class Trainer:
         print(f"Best hyperparameters: {search.best_params_}")
         self.save_model(f"best_model_{self.name}")
 
-    def save_model(self, name: str = None, best: bool = False):
+    def save_model(self, name: str = None, best: bool = False, verbose: bool = True):
         if not name:
             name = self.name
         if not name[:-3] == ".pt":
@@ -323,7 +323,8 @@ class Trainer:
         model = self.best_model if best else self.model
 
         torch.save(model.state_dict(), MODEL_FOLDER.joinpath(name))
-        print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
+        if verbose:
+            print(f"Model saved at {MODEL_FOLDER.joinpath(name)}")
 
         # LOAD MODEL
         # model = torch.jit.load('model_scripted.pt')
