@@ -157,6 +157,7 @@ def xgb_model_pipeline(
     }
 
     xgb_reg = xgb.XGBRegressor(
+        device="cuda"
         # **model_params,
         # eval_metric=mean_absolute_error,
         )
