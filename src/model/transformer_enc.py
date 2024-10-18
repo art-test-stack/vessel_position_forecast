@@ -62,16 +62,17 @@ class EncoderModel(nn.Module):
     def __init__(
             self, 
             num_features: int = 7, 
-            num_outputs: int = 6, 
+            dim_out: int = 6, 
+            seq_len: int = 32,
             num_layers: int = 1,
             dim_ffn: int = 128,
-            d_model: int = 64,
+            d_model: int = 32,
             nhead: int = 8,
-            dropout: float = .1,
+            dropout: float = .5,
             layer_norm_eps: float = 0.00001,
             tf_norm_first: bool = False,
             bias: bool = True,
-            act_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.SiLU(),
+            act_dec: Union[str | Callable[[torch.Tensor], torch.Tensor]] = nn.ReLU(),
             act_out: nn.Module | Callable[[torch.Tensor], torch.Tensor] | None = None,
             compute_mean: bool = False,
             device: torch.device | str = DEVICE
@@ -92,21 +93,29 @@ class EncoderModel(nn.Module):
         )
         # self.model = nn.TransformerEncoder(dec_layer, num_layers=num_layers)
         # self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
-        self.main = nn.Sequential(
+        self.te = (
             nn.Linear(num_features, d_model, bias=bias),
             nn.TransformerEncoder(dec_layer, num_layers=num_layers),
-            nn.Linear(d_model, num_outputs, bias=bias),
+        )
+        self.main = nn.Sequential(
+            nn.Linear(d_model, d_model // 2, bias=bias),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(d_model // 2, d_model // 2, bias=bias),
+            nn.Dropout(dropout),
+            nn.ReLU(),
+            nn.Linear(d_model // 2, dim_out, bias=bias),
         )
         self.act_out = act_out # nn.Sigmoid()
         
     def forward(self, x):
         len_b, len_s, _ = x.shape
+        x = self.te(x)[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else torch.mean(out, dim=1).reshape(len_b, 1, -1)
         out = self.main(x)
-        out = out[:, -1, :].view(len_b, 1, -1) if not self.compute_mean else torch.mean(out, dim=1).reshape(len_b, 1, -1)
         
         if self.act_out is not None:
-            return self.act_out(self.ffn(out))
-        return self.ffn(out)
+            return self.act_out(out)
+        return out
 
 
     # def get_pad_mask(self, seq: torch.Tensor):
