@@ -110,7 +110,8 @@ def xgb_model_pipeline(
             scaler = joblib.load(preprocess_folder.joinpath("scaler")) 
             test_set = pd.read_csv(preprocess_folder.joinpath("test_set.csv"))
             df_lat_long = pd.read_csv(preprocess_folder.joinpath("df_lat_long.csv"))
-            assert X_train.shape[1] == seq_len, "Sequence length mismatch"
+            if len(X_train.shape) > 2:
+                assert X_train.shape[1] == seq_len, "Sequence length mismatch"
 
         except:
             print(f"ERROR: File missing in {str(preprocess_folder)}. I will do preprocessing anyway...")
@@ -156,8 +157,8 @@ def xgb_model_pipeline(
     }
 
     xgb_reg = xgb.XGBRegressor(
-        **model_params,
-        eval_metric=mean_absolute_error,
+        # **model_params,
+        # eval_metric=mean_absolute_error,
         )
     grid_search = GridSearchCV(
         xgb_reg,
