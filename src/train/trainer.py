@@ -192,7 +192,7 @@ class Trainer:
             # tepoch.
             for epoch in range(epochs):
                 self.model.train()
-                running_loss = 0.0
+                running_loss = 0.
                 for inputs, targets in train_loader:
                     inputs, targets = inputs.to(self.device), targets.to(self.device)
                     outputs = self.model(inputs)
@@ -207,7 +207,7 @@ class Trainer:
                     
                     running_loss += loss.item()
 
-                avg_loss = running_loss / len(train_loader.dataset)
+                avg_loss = running_loss / train_loader.__len__()
                 self.losses.append(avg_loss)
                 # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
@@ -246,7 +246,7 @@ class Trainer:
 
         """
         self.model.eval()
-        running_val_loss = 0.0
+        running_val_loss = 0.
         with torch.no_grad():
             for inputs, targets in val_loader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
@@ -254,7 +254,7 @@ class Trainer:
                 loss = self.metric(outputs, targets)
                 running_val_loss += loss.item()
 
-        avg_val_loss = running_val_loss / len(val_loader.dataset)
+        avg_val_loss = running_val_loss / val_loader.__len__()
         self.val_losses.append(avg_val_loss)
         # print(f"Validation Loss: {avg_val_loss:.4f}")
         return avg_val_loss
