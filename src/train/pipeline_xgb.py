@@ -198,23 +198,26 @@ def xgb_model_pipeline(
     #         # **fit_params,
     #     )
 
-    eval_metric = "rmse"
+    try:
+        eval_metric = "rmse"
 
-    results = grid_search.evals_result()
-    train_errors = results['validation_0'][eval_metric]
-    test_errors = results['validation_1'][eval_metric]
+        results = grid_search.best_estimator_.evals_result()
+        train_errors = results['validation_0'][eval_metric]
+        test_errors = results['validation_1'][eval_metric]
 
-    import matplotlib.pyplot as plt
-    
-    fig = plt.figure()
-    plt.plot(train_errors, label='Train')
-    plt.plot(test_errors, label='Test')
-    plt.xlabel('Boosting Rounds')
-    plt.ylabel(eval_metric)
-    plt.legend()
-    plt.title('Learning Curves')
-    plt.savefig(f"{str(uuid.uuid4())}.png")
-    plt.close(fig)
+        import matplotlib.pyplot as plt
+        
+        fig = plt.figure()
+        plt.plot(train_errors, label='Train')
+        plt.plot(test_errors, label='Test')
+        plt.xlabel('Boosting Rounds')
+        plt.ylabel(eval_metric)
+        plt.legend()
+        plt.title('Learning Curves')
+        plt.savefig(f"{str(uuid.uuid4())}.png")
+        plt.close(fig)
+    except:
+        print("Error plotting learning curves")
 
     model = grid_search.best_estimator_
     print("Best model params:", grid_search.best_params_)
