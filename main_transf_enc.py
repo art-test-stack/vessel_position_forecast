@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     dim_in = 20
     dim_out = 7
-    # preprocess_file = Path(f"data/preprocessed_with_sincos_heading_seq_len_{seq_len}/")
-    preprocess_file = LAST_PREPROCESS_FOLDER
+    preprocess_file = Path(f"data/preprocessed_with_sincos_heading_seq_len_{seq_len}/")
+    # preprocess_file = LAST_PREPROCESS_FOLDER
     if not preprocess_file.exists():
         preprocess_file.mkdir()
         do_preprocess = True
