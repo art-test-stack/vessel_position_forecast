@@ -93,7 +93,7 @@ class EncoderModel(nn.Module):
         )
         # self.model = nn.TransformerEncoder(dec_layer, num_layers=num_layers)
         # self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
-        self.te = (
+        self.te = nn.Sequential(
             nn.Linear(num_features, d_model, bias=bias),
             nn.TransformerEncoder(dec_layer, num_layers=num_layers),
         )
