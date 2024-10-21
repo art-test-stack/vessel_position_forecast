@@ -145,21 +145,33 @@ def xgb_model_pipeline(
     y_val = y_val.numpy() if to_torch else y_val
 
     params_grid = {
-        'n_estimators': [2000, 3000, 3500],
-        'gamma': [0.5, 1, 5],
-        'subsample': [0.6, 1.0],
-        'max_depth': [4, 5],
-        'eta': [ 0.005, 0.01, 0.05],
-        'n_estimators': [ 3000, 4000 ],
-        'min_child_weight': [3, 5, 7],
-        'colsample_bytree': [.7, 0.6, .5],
+        'n_estimators': [2000, 3000, 5000],
+        'gamma': [5, 10],
+        # 'gamma': [0.5, 1, 5, 10],
+        'subsample': [1.0],
+        # 'subsample': [0.6, 1.0],
+        'max_depth': [4, 5, 10, 15, 35, 50],
+        'eta': [ 0.05 ],
+        # 'eta': [ 0.005, 0.01, 0.05],
+        # 'n_estimators': [ 3000, 4000 ],
+        'min_child_weight': [5, 7, 10, 15],
+        # 'min_child_weight': [3, 5, 7, 10],
+        # 'colsample_bytree': [.7, 0.6, .5],
         'early_stopping_rounds': [50]
     }
+    # best_params = {
+    #     'colsample_bytree': 0.7, 
+    #     'early_stopping_rounds': 50, 
+    #     'eta': 0.05, 
+    #     'gamma': 5, 
+    #     'max_depth': 5, 
+    #     'min_child_weight': 7, 
+    #     'n_estimators': 3000, 
+    #     'subsample': 1.0
+    # }
 
     xgb_reg = xgb.XGBRegressor(
         device="cuda"
-        # **model_params,
-        # eval_metric=mean_absolute_error,
         )
     grid_search = GridSearchCV(
         xgb_reg,
@@ -179,24 +191,8 @@ def xgb_model_pipeline(
         X_train,
         y_train,
         eval_set=[(X_train, y_train), (X_val, y_val)],
-        # early_stopping_rounds=50,
         verbose=True
     )
-    # model = MultiOutputRegressor(xgb_reg)
-
-
-    # fit_params = {
-    #     "eval_set": [(X_train, y_train), (X_val, y_val)],
-    #     # "eval_metric": ['mae', 'mse'],
-    #     "verbose": True
-    # }
-    # if not skip_training:
-    #     print("Start training...")
-    #     model.fit(
-    #         X_train,
-    #         y_train,
-    #         # **fit_params,
-    #     )
 
     try:
         eval_metric = "rmse"
@@ -206,7 +202,7 @@ def xgb_model_pipeline(
         test_errors = results['validation_1'][eval_metric]
 
         import matplotlib.pyplot as plt
-        
+        file_name = MODEL_FOLDER.joinpath(f"xgb_{str(uuid.uuid4())}.png")
         fig = plt.figure()
         plt.plot(train_errors, label='Train')
         plt.plot(test_errors, label='Test')
@@ -214,8 +210,10 @@ def xgb_model_pipeline(
         plt.ylabel(eval_metric)
         plt.legend()
         plt.title('Learning Curves')
-        plt.savefig(f"{str(uuid.uuid4())}.png")
+        plt.savefig(file_name)
         plt.close(fig)
+
+        print(f"Learning curves plot on {file_name}")
     except:
         print("Error plotting learning curves")
 
@@ -223,50 +221,45 @@ def xgb_model_pipeline(
     print("Best model params:", grid_search.best_params_)
     score = model.score(X_val, y_val)
 
+
+    # best_params = {
+    #     'colsample_bytree': 0.7, 
+    #     'early_stopping_rounds': 50, 
+    #     'eta': 0.05, 
+    #     'gamma': 5, 
+    #     'max_depth': 5, 
+    #     'min_child_weight': 7, 
+    #     'n_estimators': 3000, 
+    #     'subsample': 1.0
+    # }
+
+    # model = xgb.XGBRegressor(
+    #     device="cuda",
+    #     **best_params
+    #     # **model_params,
+    #     # eval_metric=mean_absolute_error,
+    #     )
+    
     if not skip_training:
         print("Start training...")
         model.fit(
             X_train,
             y_train,
             eval_set=[(X_train, y_train), (X_val, y_val)],
-            early_stopping_rounds=50,
             verbose=True
         )
 
     import numpy as np
 
     try:
+        score = model.score(X_val, y_val)
         print("Score on validation set (rmse):", np.sqrt(score))
     except:
         try:
+            score = model.score(X_val, y_val)
             print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy()))
         except:
             print("Score ???")
-
-
-    # model = trainer.best_model
-    # optimizer = opt(model.parameters(), lr=lr/10)
-    # X = torch.cat([X_train, X_val], dim=0)
-    # y = torch.cat([y_train, y_val], dim=0)
-    # final_trainer = Trainer(
-    #     model=model,
-    #     loss=loss,
-    #     optimizer=optimizer,
-    #     device=DEVICE
-    # )
-    # if not skip_training:
-    #     print("Start fine tuning...")
-    #     final_trainer.fit(
-    #         X=X,
-    #         y=y,
-    #         # X_val=X_val,
-    #         # y_val=y_val,
-    #         epochs=epochs_ft,
-    #         eval_on_test=True,
-    #         k_folds=0,
-    #         split_ratio=.95
-    #     )
-    # PREDICTION STEP
 
     grouped_test = test_set.groupby("vesselId")
 
@@ -330,6 +323,7 @@ def xgb_model_pipeline(
         sample_submission = sample_submission[['ID']].merge(forecast[["ID","longitude_predicted","latitude_predicted"]], on='ID', how='left')
         try:
             sample_submission.to_csv(repertory, index=False)
+            print(f"Repertory file name is: {repertory}")
         except:
             print("Error register file")
             submit(forecast)
@@ -337,3 +331,5 @@ def xgb_model_pipeline(
     print("res describe")
     print(res.describe())
     submit(res)
+
+    print("OK - Pipeline finished")

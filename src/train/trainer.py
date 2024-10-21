@@ -230,9 +230,8 @@ class Trainer:
                     print(f"Early stopping at epoch {epoch}")
                     break
 
-        if eval_on_test:
-            print(f"Best model on val score: {self.best_score}")
-
+        print(f"Best model on val score: {self.best_score}")
+        print(f"Model saved at {MODEL_FOLDER.joinpath(self.name)}")
         self.plot_losses()
 
 

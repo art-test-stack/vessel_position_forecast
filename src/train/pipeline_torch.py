@@ -167,10 +167,10 @@ def torch_model_pipeline(
     import numpy as np
 
     try:
-        print("Score on validation set (rmse):", np.sqrt(score))
+        print("Score on validation set (rmse):", np.sqrt(score) / y_val.shape[0])
     except:
         try:
-            print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy()))
+            print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy())/ y_val.shape[0])
         except:
             print("Score ???")
 

@@ -14,7 +14,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 if __name__ == "__main__":
-    seq_len = 32
+    seq_len = 16
     do_preprocess = False
 
     dim_in = 20
