@@ -9,3 +9,4 @@ matplotlib
 plotly
 twine==5.0.0
 joblib
+seaborn

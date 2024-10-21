@@ -20,7 +20,7 @@ from copy import deepcopy
 
 
 class EarlyStopping:
-    def __init__(self, patience=100, min_delta=5e-4):
+    def __init__(self, patience=100, min_delta=5e-3):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -32,6 +32,8 @@ class EarlyStopping:
 
     def __call__(self, test_loss):
         self.save_model = False
+        self.reduce_lr = False
+        self.early_stop = False
         if self.best_loss is None:
             self.best_loss = test_loss
             self.save_model = True
@@ -224,7 +226,9 @@ class Trainer:
                 tepoch.set_postfix(
                     loss = self.losses[-1] if self.losses else "?",
                     val_loss = self.val_losses[-1] if self.val_losses else "?",
-                    best = self.best_score if self.best_score else "?"
+                    best = self.best_score if self.best_score else "?",
+                    early_stopping_step = early_stopping.counter,
+                    lr_counting = early_stopping.lr_counter
                 )
                 tepoch.update(1)
                 early_stopping(self.val_losses[-1])

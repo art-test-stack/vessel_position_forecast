@@ -14,12 +14,12 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 if __name__ == "__main__":
-    seq_len = 1
+    seq_len = 3
     do_preprocess = False
 
     dim_in = 20
     dim_out = 7
-    preprocess_file = Path(f"data/preprocessed_with_sincos_heading_seq_len_{seq_len}/")
+    preprocess_file = Path(f"data/preprocessed_new_rot_seq_len_{seq_len}/")
     if not preprocess_file.exists():
         preprocess_file.mkdir()
         do_preprocess = True
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         opt = torch.optim.AdamW,
         # lr = 5e-6,
         seq_len = seq_len, 
-        seq_type = "basic",
+        seq_type = "n_in_1_out",
         seq_len_out = 1,
         verbose = True,
         to_torch = True,

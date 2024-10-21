@@ -193,7 +193,7 @@ def xgb_model_pipeline(
         X_train,
         y_train,
         eval_set=[(X_train, y_train), (X_val, y_val)],
-        verbose=True
+        verbose=4
     )
 
     try:
