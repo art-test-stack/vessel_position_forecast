@@ -20,12 +20,14 @@ from copy import deepcopy
 
 
 class EarlyStopping:
-    def __init__(self, patience=40, min_delta=5e-4):
+    def __init__(self, patience=100, min_delta=5e-4):
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
+        self.lr_counter = 0
         self.best_loss = None
         self.early_stop = False
+        self.reduce_lr = False
         self.save_model = True
 
     def __call__(self, test_loss):
@@ -36,9 +38,13 @@ class EarlyStopping:
         elif test_loss < self.best_loss - self.min_delta:
             self.best_loss = test_loss
             self.counter = 0
+            self.lr_counter = 0
             self.save_model = True
         else:
             self.counter += 1
+            self.lr_counter += 1
+            if self.lr_counter >= self.patience // 2:
+                self.reduce_lr = True
             if self.counter >= self.patience:
                 self.early_stop = True
 
@@ -229,6 +235,10 @@ class Trainer:
                 if early_stopping.early_stop:
                     print(f"Early stopping at epoch {epoch}")
                     break
+
+                if early_stopping.early_stop:
+                    for g in self.optimizer.param_groups:
+                        g['lr'] *= .5
 
         print(f"Best model on val score: {self.best_score}")
         print(f"Model saved at {MODEL_FOLDER.joinpath(self.name)}")

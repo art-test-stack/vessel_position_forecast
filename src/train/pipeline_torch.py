@@ -30,6 +30,11 @@ def iterative_forecast_on_long_lat_diff(seq, model, steps, seq_len, dim_in, dim_
         y_pred = model.predict(x_test)[-1,:]
 
         preds.append(y_pred)
+
+        # long_lat_pred = np.concatenate(seq[seq_len+k-1][-2] + y_pred[-2], seq[seq_len+k-1][-1] + y_pred[-1])
+        # long_pred = seq[seq_len+k-1][-2] + y_pred[-2]
+        # lat_pred = seq[seq_len+k-1][-1] + y_pred[-1]
+
         seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_out + 2], y_pred[:-2]), axis=None)
         
         current_sequence = seq[k+1:k+1+seq_len].reshape(1, seq_len, dim_in)

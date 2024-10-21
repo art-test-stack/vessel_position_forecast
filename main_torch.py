@@ -14,12 +14,13 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 if __name__ == "__main__":
-    seq_len = 3
-    do_preprocess = False
+    seq_len = 8
+    do_preprocess = True
 
     dim_in = 20
     dim_out = 7
-    preprocess_file = Path("data/preprocessed_with_sincos_heading_seq_len_3/")
+    preprocess_file = Path(f"data/preprocessed_last_rot_{seq_len}/")
+
     if not preprocess_file.exists():
         preprocess_file.mkdir()
         do_preprocess = True
@@ -38,8 +39,8 @@ if __name__ == "__main__":
         to_torch = True,
         parallelize_seq = True,
         scaler = StandardScaler(),
-        epochs_tr=500,
-        epochs_ft=500,
+        epochs_tr=1000,
+        epochs_ft=2000,
         skip_training=False,
         dropout=.4,
         preprocess_folder = preprocess_file

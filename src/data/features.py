@@ -172,6 +172,34 @@ def create_rot_features(df: pd.DataFrame) -> pd.DataFrame:
             return 'no_turn'
     
     df['rot_category'] = df['rot'].apply(categorize_rot)
+    df = one_hot_encode(df, 'rot_category')
+    return df
+
+def sog_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    CREATE `sog` FEATURE
+
+    Args:
+        - df: pd.DataFrame = ais_train and ais_test concatenated (ais_data)
+    Returns:
+        - ais_data: pd.DataFrame = ais_data with `sog` feature preprocessed
+    """
+    
+    # Replace 1023 (not available) with NaN and 1022 with 102.2 knots
+    df['sog'] = df['sog'].replace(1023, pd.NA).replace(1022, 102.2)
+    
+    # Convert SOG to knots (1/10 knot steps)
+    df['sog'] = df['sog'] / 10.0
+
+    # Replace NaN values with the mean value of the vessel
+    df['sog'] = (
+        df
+        .groupby('vesselId')['sog']
+        .transform(lambda x: x.fillna(x.mean()))
+    )
+    
+    # If the value is still NaN, replace it with the mean value of all vessels
+    df['sog'] = df['sog'].fillna(df['sog'].mean())
     
     return df
 

@@ -1,4 +1,12 @@
-from src.data.features import create_time_diff_feature, presequence_data, create_long_lat_diff_feature, one_hot_encode, create_heading_features
+from src.data.features import (
+    create_time_diff_feature, 
+    presequence_data, 
+    create_long_lat_diff_feature, 
+    one_hot_encode, 
+    create_heading_features, 
+    sog_feature,
+    create_rot_features
+)
 
 import concurrent.futures
 
@@ -27,18 +35,36 @@ features_raw_ais_data = [
 features_input = [
     'time_diff',
     # 'navstat',
-    # 'latitude',
-    # 'longitude',
-    'navstat_1.0', 'navstat_2.0', 'navstat_3.0', 'navstat_4.0',
-    'navstat_5.0', 'navstat_6.0', 'navstat_7.0', 'navstat_8.0',
-    'navstat_9.0', 'navstat_11.0', 'navstat_12.0', 'navstat_13.0',
-    'navstat_14.0', 'navstat_15.0',
+    'navstat_1.0', 
+    'navstat_2.0', 
+    # 'navstat_3.0', 
+    # 'navstat_4.0',
+    'navstat_5.0', 
+    'navstat_6.0', 
+    # 'navstat_7.0', 
+    'navstat_8.0',
+    # 'navstat_9.0', 
+    # 'navstat_11.0', 
+    # 'navstat_12.0', 
+    # 'navstat_13.0',
+    # 'navstat_14.0', 
+    'navstat_15.0',
     'cog',
     'sog',
-    'rot',
+    # 'rot',
+    'rot_calculated',
+    # 'rot_category',
+    # 'rot_category_left_more_than_5_deg_per_30s',
+    # 'rot_category_no_turn',
+    # 'rot_category_right_more_than_5_deg_per_30s',
+    # 'rot_category_turning_left',
+    # 'rot_category_turning_right',
     # 'heading',
     'heading_cos',
     'heading_sin',
+    # TODO: handle lat/long
+    # 'latitude',
+    # 'longitude',
     # 'long_diff',
     # 'lat_diff',
 ]
@@ -46,14 +72,14 @@ features_input = [
 features_to_scale = [
     'time_diff',
     # 'navstat',
-    # 'latitude',
-    # 'longitude',
     'cog',
     'sog',
-    'rot',
+    'rot_calculated',
     # 'heading',
     # 'heading_cos',
     # 'heading_sin',
+    # 'latitude',
+    # 'longitude',
     'long_diff',
     'lat_diff',
 ]
@@ -63,7 +89,7 @@ features_output = [
     # 'time_diff',
     'cog',
     'sog',
-    'rot',
+    'rot_calculated',
     # 'heading',
     'heading_cos',
     'heading_sin',
@@ -266,6 +292,8 @@ def preprocess(
     # UPDATE `split` LABEL IN df
     df = presequence_data(df, test_vessel_ids, seq_len)
     df = create_heading_features(df)
+    df = sog_feature(df)
+    df = create_rot_features(df)
 
     train_set, test_set = split_train_test_sets(df)
 
