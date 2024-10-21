@@ -213,7 +213,7 @@ class Trainer:
                     
                     running_loss += loss.item()
 
-                avg_loss = running_loss / train_loader.__len__()
+                avg_loss = running_loss / train_loader.dataset.__len__()
                 self.losses.append(avg_loss)
                 # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
 
@@ -263,7 +263,7 @@ class Trainer:
                 loss = self.metric(outputs, targets)
                 running_val_loss += loss.item()
 
-        avg_val_loss = running_val_loss / val_loader.__len__()
+        avg_val_loss = running_val_loss / val_loader.dataset.__len__()
         self.val_losses.append(avg_val_loss)
         # print(f"Validation Loss: {avg_val_loss:.4f}")
         return avg_val_loss
