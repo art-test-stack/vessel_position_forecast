@@ -7,6 +7,7 @@ from src.data.features import (
     sog_feature,
     create_rot_features
 )
+from utils import DATA_FOLDER
 
 import concurrent.futures
 
@@ -16,7 +17,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-
+from matplotlib import pyplot as plt
+import seaborn as sns
+from uuid import uuid4
 from typing import Any, Union, List, Tuple
 from tqdm import tqdm
 
@@ -233,6 +236,20 @@ def fit_and_normalize(
     pass
 
 
+def plot_correlation_matrix(df: pd.DataFrame, features_input: List[str], features_output: List[str]) -> None:
+    correlation_matrix = df[features_input + features_output[-2:]].corr()
+    
+    file_name = DATA_FOLDER.joinpath(f"corr_{str(uuid4())}.png")
+    fig = plt.figure(figsize=(20, 20))
+    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
+
+    plt.title('Correlation Matrix Heatmap', size=16)
+    
+    plt.savefig(file_name)
+    plt.close(fig)
+    print(f"Correlation matrix saved at: {file_name}")
+
+
 def preprocess(
         df_train: pd.DataFrame, 
         df_test: pd.DataFrame,
@@ -245,6 +262,7 @@ def preprocess(
         verbose: bool = False,
         to_torch: bool = False,
         parallelize_seq: bool = False,
+        plot_corr_matrix: bool = False
     ) -> None:
     """
     PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
@@ -294,6 +312,12 @@ def preprocess(
     df = create_heading_features(df)
     df = sog_feature(df)
     df = create_rot_features(df)
+
+    if plot_corr_matrix:
+        try:
+            plot_correlation_matrix(df, features_input, features_output)
+        except Exception as e:
+            print(f"Error while plotting correlation matrix: {e}")
 
     train_set, test_set = split_train_test_sets(df)
 

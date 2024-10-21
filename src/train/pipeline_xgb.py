@@ -157,8 +157,10 @@ def xgb_model_pipeline(
         'min_child_weight': [5, 7, 10, 15],
         # 'min_child_weight': [3, 5, 7, 10],
         # 'colsample_bytree': [.7, 0.6, .5],
-        'early_stopping_rounds': [50]
+        'early_stopping_rounds': [50],
+        'learning_rate': [0.01, 0.1, 0.2]
     }
+
     # best_params = {
     #     'colsample_bytree': 0.7, 
     #     'early_stopping_rounds': 50, 
@@ -172,13 +174,13 @@ def xgb_model_pipeline(
 
     xgb_reg = xgb.XGBRegressor(
         device="cuda"
-        )
+    )
     grid_search = GridSearchCV(
         xgb_reg,
         param_grid=params_grid,
         cv=5,
         n_jobs=-1,
-        verbose=1,
+        verbose=4,
         scoring='neg_mean_squared_error'
     )
 
@@ -222,7 +224,17 @@ def xgb_model_pipeline(
     score = model.score(X_val, y_val)
 
 
-    # best_params = {
+       # best_params = {
+    #   'early_stopping_rounds': 50, 
+    #   'eta': 0.05, 
+    #   'gamma': 5, 
+    #   'max_depth': 5, 
+    #   'min_child_weight': 10, 
+    #   'n_estimators': 2000, 
+    #   'subsample': 1.0
+    # }
+
+    # best_params_2 = {
     #     'colsample_bytree': 0.7, 
     #     'early_stopping_rounds': 50, 
     #     'eta': 0.05, 

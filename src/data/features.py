@@ -158,7 +158,7 @@ def create_rot_features(df: pd.DataFrame) -> pd.DataFrame:
     
     # Categorize the ROT values
     def categorize_rot(rot):
-        if rot == -128:
+        if rot == -128 or rot == 128:
             return 'no_info'
         elif rot == 127:
             return 'right_more_than_5_deg_per_30s'
