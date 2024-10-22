@@ -174,10 +174,10 @@ class Trainer:
 
         else: 
             # TODO: Random split
-            if eval_on_test and (not X_val or not y_val):
-                idx = int(len(X_train) * split_ratio) if eval_on_test else len(X) - 1
+            if eval_on_test and X_val is None and y_val is None:
+                idx = int(len(X_train) * split_ratio) # if eval_on_test else len(X) - 1
                 X_train, y_train = X_train[:idx], y_train[:idx]
-                X_val, y_val = (X_train[idx:], y_train[idx:]) if eval_on_test else (None, None)
+                X_val, y_val = (X_train[idx:], y_train[idx:]) #  if eval_on_test else (None, None)
             
             train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
             self._train_nn(train_loader, val_loader, epochs, eval_on_test)
@@ -195,7 +195,7 @@ class Trainer:
 
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
 
-        if eval_on_test and X_val is not None and y_val is not None:
+        if eval_on_test and (X_val is not None) and (y_val is not None):
             val_dataset = TensorDataset(X_val, y_val)
             val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
         else:
@@ -245,8 +245,7 @@ class Trainer:
                 avg_loss = running_loss / train_loader.dataset.__len__()
                 self.losses.append(avg_loss)
                 # print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}")
-
-                if eval_on_test and val_loader and epoch % self.eval_step == 0:
+                if eval_on_test and val_loader and (epoch % self.eval_step == 0):
                     val_loss = self._evaluate_nn(val_loader)
                     self._update_best_model(val_loss)
                 
@@ -256,6 +255,8 @@ class Trainer:
                     best = self.best_score if self.best_score else "?",
                     early_stopping_step = early_stopping.counter,
                     lr_counting = early_stopping.lr_counter
+                ) if eval_on_test else tepoch.set_postfix(
+                    loss = self.losses[-1] if self.losses else "?"
                 )
                 tepoch.update(1)
                 if eval_on_test:
