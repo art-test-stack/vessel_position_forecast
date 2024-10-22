@@ -107,7 +107,7 @@ class Trainer:
                 torch.nn.init.xavier_normal_(layer.weight)
                 if layer.bias is not None:
                     torch.nn.init.zeros_(layer.bias)
-
+        
         self.early_stopping = EarlyStopping(patience=early_stopping_rounds, min_delta=early_stopping_min_delta)
         
         self.load_model()
@@ -187,6 +187,9 @@ class Trainer:
             
             train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
             self._train_nn(train_loader, val_loader, epochs, eval_on_test)
+        
+        # REINITIALIZE EARLY STOPPING
+        self.early_stopping = EarlyStopping(self.early_stopping.patience, self.early_stopping.min_delta)
 
     def _prepare_dataloaders(
             self,
@@ -258,23 +261,23 @@ class Trainer:
                     loss = self.losses[-1] if self.losses else "?",
                     val_loss = self.val_losses[-1] if self.val_losses else "?",
                     best = self.best_score if self.best_score else "?",
-                    early_stopping_step = early_stopping.counter,
-                    lr_counting = early_stopping.lr_counter
+                    early_stopping_step = self.early_stopping.counter,
+                    lr_counting = self.early_stopping.lr_counter
                 ) if eval_on_test else tepoch.set_postfix(
                     loss = self.losses[-1] if self.losses else "?"
                 )
                 tepoch.update(1)
                 if eval_on_test and (epoch % self.eval_step == 0):
-                    early_stopping(self.val_losses[-1])
+                    self.early_stopping(self.val_losses[-1])
 
-                if early_stopping.save_model:
+                if self.early_stopping.save_model:
                     self.save_model(best = True, verbose=False)
 
-                if early_stopping.early_stop:
+                if self.early_stopping.early_stop:
                     print(f"Early stopping at epoch {epoch}")
                     break
 
-                if early_stopping.early_stop:
+                if self.early_stopping.early_stop:
                     for g in self.optimizer.param_groups:
                         g['lr'] *= .5
 
