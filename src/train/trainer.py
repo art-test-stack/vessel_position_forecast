@@ -60,11 +60,13 @@ class Trainer:
             opt: torch.optim.Optimizer | None = None, 
             device: str | torch.device = DEVICE, 
             epochs: int = 500,
-            lr: float = 5e-3,
+            lr: float = 5e-4,
             batch_size: int = 1024,
             name: str = f"{str(uuid.uuid4())}.pt",
             clip_grad: bool = True,
             verbose: bool = True,
+            early_stopping_rounds: int = 20,
+            early_stopping_min_delta: float = 1e-5,
             **kwargs
         ):
         """
@@ -97,12 +99,16 @@ class Trainer:
         self.losses = []
         self.val_losses = []
 
-        self.eval_step = 20
+        self.eval_step = 10
         
         self.verbose = verbose 
         for layer in model.main:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_normal_(layer.weight)
+                if layer.bias is not None:
+                    torch.nn.init.zeros_(layer.bias)
+
+        self.early_stopping = EarlyStopping(patience=early_stopping_rounds, min_delta=early_stopping_min_delta)
         
         self.load_model()
 
@@ -209,7 +215,7 @@ class Trainer:
             train_loader: DataLoader, 
             val_loader: DataLoader | None = None, 
             epochs: int = 10, 
-            eval_on_test: bool = False
+            eval_on_test: bool = False,
         ):
         """
         Description:
@@ -221,7 +227,6 @@ class Trainer:
             epochs: Number of epochs for training
             eval_on_test: Whether to evaluate during training
         """
-        early_stopping = EarlyStopping()
 
         with tqdm(range(epochs), unit="epoch", colour="red", disable=not self.verbose) as tepoch:
             # tepoch.
@@ -259,7 +264,7 @@ class Trainer:
                     loss = self.losses[-1] if self.losses else "?"
                 )
                 tepoch.update(1)
-                if eval_on_test:
+                if eval_on_test and (epoch % self.eval_step == 0):
                     early_stopping(self.val_losses[-1])
 
                 if early_stopping.save_model:

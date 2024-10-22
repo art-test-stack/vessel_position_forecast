@@ -36,6 +36,8 @@ if __name__ == "__main__":
         "opt": torch.optim.Adam,
         "loss": nn.MSELoss(reduction="sum"),
         "eval_on_test": True,
+        "early_stopping_rounds": 100,
+        "early_stopping_min_delta": 1e-4,
     }
     
     pipeline(

@@ -186,7 +186,7 @@ def sog_feature(df: pd.DataFrame) -> pd.DataFrame:
     """
     
     # Replace 1023 (not available) with NaN and 1022 with 102.2 knots
-    df['sog'] = df['sog'].replace(1023, pd.NA).replace(1022, 102.2)
+    df['sog'] = df['sog'].replace(1023, pd.NA) # .replace(1022, 102.2)
     
     # Convert SOG to knots (1/10 knot steps)
     df['sog'] = df['sog'] / 10.0
