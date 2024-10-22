@@ -113,7 +113,7 @@ class Trainer:
             X_val: torch.Tensor | None = None,
             y_val: torch.Tensor | None = None,
             epochs: int | None = None, 
-            eval_on_test: bool = False,
+            eval_on_test: bool = True,
             split_ratio: float = .9,
             force_train: bool = False,
             k_folds: int = 5
@@ -149,7 +149,7 @@ class Trainer:
             y_val = torch.tensor(y_val, dtype=torch.float32).to(self.device)
 
         if k_folds > 1:
-            if self.verbose:
+            if self.verbose and False:
                 print("Cross-validation not supported yet.")
             return self.fit(X_train, y_train, X_val, y_val, epochs, eval_on_test, split_ratio, force_train, k_folds=1)
             # kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
