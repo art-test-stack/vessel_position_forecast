@@ -7,7 +7,7 @@ from src.data.features import (
     sog_feature,
     create_rot_features
 )
-from utils import DATA_FOLDER
+from utils import DATA_FOLDER, LAST_PREPROCESS_FOLDER
 
 import concurrent.futures
 
@@ -22,6 +22,8 @@ import seaborn as sns
 from uuid import uuid4
 from typing import Any, Union, List, Tuple
 from tqdm import tqdm
+from pathlib import Path
+import joblib
 
 features_raw_ais_data = [
     "vesselId", 
@@ -98,6 +100,14 @@ features_output = [
     'heading_sin',
     'long_diff',
     'lat_diff',
+]
+
+features_missing = [
+    'cog',
+    'sog',
+    'rot_calculated',
+    'heading_cos',
+    'heading_sin',
 ]
 
 seq_types = ["basic", "n_in_1_out", "n_in_m_out"]
@@ -262,7 +272,8 @@ def preprocess(
         verbose: bool = False,
         to_torch: bool = False,
         parallelize_seq: bool = False,
-        plot_corr_matrix: bool = False
+        plot_corr_matrix: bool = False,
+        preprocess_folder: Path | str = LAST_PREPROCESS_FOLDER,
     ) -> None:
     """
     PREPROCESS RAW data FROM `*.csv` FILES (only `ais_train.csv` and `ais_test.csv` for now)
@@ -359,16 +370,23 @@ def preprocess(
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)
 
-    # df_val = make_df_val(train_set, dropped_vessel_ids, len(X_train))
     print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
+    X_train = torch.Tensor(X_train)
+    y_train = torch.Tensor(y_train)
 
+    X_val = torch.Tensor(X_val)
+    y_val = torch.Tensor(y_val)
+
+    torch.save(X_train, preprocess_folder.joinpath("X_train.pt"))
+    torch.save(y_train, preprocess_folder.joinpath("y_train.pt"))
+    torch.save(X_val, preprocess_folder.joinpath("X_val.pt"))
+    torch.save(y_val, preprocess_folder.joinpath("y_val.pt"))
+
+    joblib.dump(scaler, preprocess_folder.joinpath("scaler")) 
+    test_set.to_csv(preprocess_folder.joinpath("test_set.csv"))
+
+    df_lat_long.to_csv(preprocess_folder.joinpath("df_lat_long.csv"))
+
+    print(f"Preprocessing ok... Files stored at: {preprocess_folder}")
+    print(f"Number of vessels dropped: {len(dropped_vessel_ids)}")
     return X_train, X_val, y_train, y_val, test_set, scaler, df_lat_long, dropped_vessel_ids
-
-def make_df_val(
-        train_set: pd.DataFrame,
-        dropped_vessel_ids: List[str],        
-        idx: int,
-
-    ) -> pd.DataFrame:
-    df_val = train_set.copy()[train_set["vesselId"] not in dropped_vessel_ids].sort_values("time")
-    # train_set.iloc[:]

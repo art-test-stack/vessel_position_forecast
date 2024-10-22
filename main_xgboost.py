@@ -2,7 +2,7 @@ from settings import *
 from utils import *
 import xgboost as xgb
 from src.model.ffn import FFNModel
-from src.train.pipeline_xgb import xgb_model_pipeline
+from src.train.pipeline_v1 import pipeline
 
 import torch
 from torch import nn
@@ -23,37 +23,39 @@ if __name__ == "__main__":
     if not preprocess_file.exists():
         preprocess_file.mkdir()
         do_preprocess = True
-    # TODO: ADD DROPOUT ARG
 
-    params = {
-    # 'n_estimators': 5000,
-        'gamma': 0.5,
-        'subsample': 0.6,
-        'n_estimators': 5000,
-        'min_child_weight':  15,
-        'colsample_bytree': 0.8,
-        'max_depth': 4,
-        'eta': 0.005,
-        'refresh_leaf': 1,
-        # "early_stopping_rounds": 50,
+    model_params = {
+        'n_estimators': [2000, 3000, 5000],
+        'gamma': [5, 10],
+        # 'gamma': [0.5, 1, 5, 10],
+        'subsample': [1.0],
+        # 'subsample': [0.6, 1.0],
+        'max_depth': [4, 5, 10, 15, 35, 50],
+        'eta': [ 0.05 ],
+        # 'eta': [ 0.005, 0.01, 0.05],
+        # 'n_estimators': [ 3000, 4000 ],
+        'min_child_weight': [5, 7, 10, 15],
+        # 'min_child_weight': [3, 5, 7, 10],
+        # 'colsample_bytree': [.7, 0.6, .5],
+        'early_stopping_rounds': [50],
+        'learning_rate': [0.01, 0.1, 0.2]
     }
-    
-    xgb_model_pipeline(
-        model_params = params,
-        do_preprocess = do_preprocess,
-        loss = nn.MSELoss(),
-        opt = torch.optim.AdamW,
-        # lr = 5e-6,
-        seq_len = seq_len, 
-        seq_type = "n_in_1_out",
-        seq_len_out = 1,
-        verbose = True,
-        to_torch = True,
-        parallelize_seq = True,
-        scaler = StandardScaler(),
-        # epochs_tr=500,
-        # epochs_ft=500,
-        # skip_training=True,
-        dropout=.4,
-        preprocess_folder = preprocess_file
+    training_params = {
+        "cv": 5,
+        "n_jobs": -1,
+        "verbose": 4,
+        "scoring": "neg_mean_squared_error",
+    }
+    pipeline(
+        model=xgb.XGBRegressor,
+        model_params=model_params,
+        training_params=training_params,
+        do_preprocess=do_preprocess,
+        seq_len=seq_len, 
+        seq_type="n_in_1_out",
+        parallelize_seq=True,
+        scaler=StandardScaler(),
+        skip_training=False,
+        preprocess_folder=preprocess_file,
+        verbose=True,
     )

@@ -2,7 +2,7 @@ from settings import *
 from utils import *
 
 from src.model.ffn import FFNModel
-from src.train.pipeline_torch import torch_model_pipeline
+from src.train.pipeline_v1 import pipeline
 
 import torch
 from torch import nn
@@ -26,22 +26,30 @@ if __name__ == "__main__":
         do_preprocess = True
     # TODO: ADD DROPOUT ARG
 
-    torch_model_pipeline(
-        model = FFNModel,
-        do_preprocess = do_preprocess,
-        loss = nn.MSELoss(reduction="sum"),
-        opt = torch.optim.AdamW,
-        lr = 5e-6,
-        seq_len = seq_len, 
-        seq_type = "n_in_1_out",
-        seq_len_out = 1,
-        verbose = True,
-        to_torch = True,
-        parallelize_seq = True,
-        scaler = StandardScaler(),
-        epochs_tr=1000,
-        epochs_ft=2000,
+    model_params = {
+        "seq_len": seq_len,
+        "dropout": .4
+    }
+    training_params = {
+        "epochs": 1000,
+        "lr": 5e-4,
+        "opt": torch.optim.Adam,
+        "loss": nn.MSELoss(reduction="sum"),
+        "eval_on_test": True,
+    }
+    
+    pipeline(
+        model=FFNModel,
+        model_params=model_params,
+        training_params=training_params,
+        do_preprocess=do_preprocess,
+        seq_len=seq_len, 
+        seq_type="n_in_1_out",
+        seq_len_out=1,
+        to_torch=True,
+        scaler=StandardScaler(),
+        parallelize_seq=True,
         skip_training=False,
-        dropout=.4,
-        preprocess_folder = preprocess_file
+        preprocess_folder=preprocess_file,
+        verbose=True,
     )

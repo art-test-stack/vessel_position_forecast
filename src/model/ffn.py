@@ -14,7 +14,8 @@ class FFNModel(nn.Module):
             dropout: float = .1,
             layer_norm_eps: float = 0.00001,
             bias: bool = True,
-            device: torch.device | str = DEVICE
+            device: torch.device | str = DEVICE,
+            **kwargs
         ) -> None:
         super().__init__()
 

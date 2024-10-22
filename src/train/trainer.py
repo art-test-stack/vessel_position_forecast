@@ -59,6 +59,7 @@ class Trainer:
             metric = None, 
             optimizer: torch.optim.Optimizer | None = None, 
             device: str | torch.device = 'cpu', 
+            epochs: int = 100,
             batch_size: int = 1024,
             name: str = f"{str(uuid.uuid4())}.pt",
             clip_grad: bool = True
@@ -86,6 +87,7 @@ class Trainer:
         self.model.to(device)
         self.name = name
         self.clip_grad = clip_grad
+        self.epochs = epochs
 
         self.losses = []
         self.val_losses = []
@@ -98,10 +100,12 @@ class Trainer:
 
     def fit(
             self, 
-            X: torch.Tensor | np.ndarray, 
-            y: torch.Tensor | np.ndarray, 
+            X_train: torch.Tensor, 
+            y_train: torch.Tensor, 
+            X_val: torch.Tensor | None = None,
+            y_val: torch.Tensor | None = None,
             k_folds: int = 5, 
-            epochs: int = 10, 
+            epochs: int | None = None, 
             eval_on_test: bool = False,
             split_ratio: float = .9
         ):
@@ -117,6 +121,7 @@ class Trainer:
             epochs: Number of epochs (for neural networks)
             eval_on_test: Whether to evaluate on the validation set during training
         """
+        epochs = epochs or self.epochs
 
         if not isinstance(X, torch.Tensor):
             X = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -148,9 +153,9 @@ class Trainer:
 
         else: 
             # TODO: Random split
-            idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
-            X_train, y_train = X[:idx], y[:idx]
-            X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
+            # idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
+            # X_train, y_train = X[:idx], y[:idx]
+            # X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
             
             train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
             self._train_nn(train_loader, val_loader, epochs, eval_on_test)
