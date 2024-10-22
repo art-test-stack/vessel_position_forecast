@@ -59,6 +59,7 @@ class MissingFeaturesHandler:
             feature: Trainer(
                 BaseMissingFeaturesHandler(),
                 name = f"missing_{feature}.pt",
+                # verbose = False
             ) 
             # if isinstance(models[feature], nn.Module)
             # else models[feature]

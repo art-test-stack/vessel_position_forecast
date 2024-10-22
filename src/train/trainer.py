@@ -60,10 +60,11 @@ class Trainer:
             opt: torch.optim.Optimizer | None = None, 
             device: str | torch.device = DEVICE, 
             epochs: int = 500,
-            lr: float = 5e-4,
+            lr: float = 5e-3,
             batch_size: int = 1024,
             name: str = f"{str(uuid.uuid4())}.pt",
             clip_grad: bool = True,
+            verbose: bool = True,
             **kwargs
         ):
         """
@@ -98,6 +99,7 @@ class Trainer:
 
         self.eval_step = 20
         
+        self.verbose = verbose 
         for layer in model.main:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_normal_(layer.weight)
@@ -147,7 +149,8 @@ class Trainer:
             y_val = torch.tensor(y_val, dtype=torch.float32).to(self.device)
 
         if k_folds > 1:
-            print("Cross-validation not supported yet.")
+            if self.verbose:
+                print("Cross-validation not supported yet.")
             return self.fit(X_train, y_train, X_val, y_val, epochs, eval_on_test, split_ratio, force_train, k_folds=1)
             # kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
 
@@ -185,14 +188,14 @@ class Trainer:
             y_train: torch.Tensor,
             X_val: torch.Tensor | None,
             y_val: torch.Tensor | None,
-            eval_on_test: bool = False,
+            eval_on_test: bool = True,
         ) -> Tuple[DataLoader, DataLoader]:
 
         train_dataset = TensorDataset(X_train, y_train)
 
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
 
-        if eval_on_test:
+        if eval_on_test and X_val is not None and y_val is not None:
             val_dataset = TensorDataset(X_val, y_val)
             val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
         else:
@@ -220,7 +223,7 @@ class Trainer:
         """
         early_stopping = EarlyStopping()
 
-        with tqdm(range(epochs), unit="epoch", colour="red") as tepoch:
+        with tqdm(range(epochs), unit="epoch", colour="red", disable=not self.verbose) as tepoch:
             # tepoch.
             for epoch in range(epochs):
                 self.model.train()
