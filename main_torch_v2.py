@@ -32,7 +32,7 @@ if __name__ == "__main__":
     }
     training_params = {
         "epochs": 1000,
-        "lr": 5e-4,
+        "lr": 5e-3,
         "opt": torch.optim.Adam,
         "loss": nn.MSELoss(reduction="sum"),
         "eval_on_test": True,

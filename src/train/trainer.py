@@ -172,9 +172,9 @@ class Trainer:
         else: 
             # TODO: Random split
             if eval_on_test and (not X_val or not y_val):
-                idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
-                X_train, y_train = X[:idx], y[:idx]
-                X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
+                idx = int(len(X_train) * split_ratio) if eval_on_test else len(X) - 1
+                X_train, y_train = X_train[:idx], y_train[:idx]
+                X_val, y_val = (X_train[idx:], y_train[idx:]) if eval_on_test else (None, None)
             
             train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
             self._train_nn(train_loader, val_loader, epochs, eval_on_test)
