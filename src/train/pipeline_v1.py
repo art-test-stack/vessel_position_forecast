@@ -69,7 +69,7 @@ def pipeline(
             seq_len=seq_len,
             seq_len_out=seq_len_out,
             verbose=verbose,
-            to_torch=isinstance(model, nn.Module),
+            to_torch=isinstance(model(), nn.Module),
             parallelize_seq=parallelize_seq,
             scaler=scaler,
             preprocess_folder=preprocess_folder
@@ -92,14 +92,23 @@ def pipeline(
             return pipeline(
                 model=model,
                 do_preprocess=True,
-
+                model_params=model_params,
+                training_params=training_params,
+                seq_len=seq_len, 
+                seq_type = seq_type,
+                seq_len_out=seq_len_out,
+                parallelize_seq=parallelize_seq,
+                scaler=scaler,
+                skip_training=skip_training,
+                preprocess_folder=preprocess_folder,
+                verbose=verbose,
             )
 
 
     dim_in = X_train.shape[-1]
     dim_out = y_train.shape[-1]
 
-    if isinstance(model, nn.Module):
+    if isinstance(model(), nn.Module):
         model = torch_train_part(
             model=model,
             model_params=model_params,
@@ -111,7 +120,7 @@ def pipeline(
             skip_training=skip_training
         )
     
-    elif isinstance(model, xgb.XGBModel):
+    elif isinstance(model(), xgb.XGBModel):
         model = xgb_train_part(
             model=model,
             model_params=model_params,
