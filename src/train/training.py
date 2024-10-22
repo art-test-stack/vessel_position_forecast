@@ -18,8 +18,11 @@ def torch_train_part(
         y_val: np.ndarray | torch.Tensor,
         skip_training: bool = False
     ):  
-    dim_out = model_params["dim_out"]
+    dim_in = X_train.shape[-1]
+    dim_out = y_train.shape[-1]
     # model params = {num_features=dim_in, dim_out=dim_out, seq_len=seq_len, dropout=dropout}
+    model_params["dim_out"] = dim_out
+    model_params["dim_in"] = dim_in
     model = model(**model_params)
 
     model.to(DEVICE)
@@ -37,18 +40,15 @@ def torch_train_part(
     X_val = torch.Tensor(X_val).to(DEVICE) if isinstance(X_val, np.ndarray) else X_val.to(DEVICE)
     y_val = torch.Tensor(y_val).to(DEVICE) if isinstance(y_val, np.ndarray) else y_val.to(DEVICE)
 
-    y_train = y_train.reshape(-1, dim_out)
-    y_val = y_val.reshape(-1, dim_out)
-
     if not skip_training:
-        print("Start training...")
+        print("Training Main Model...")
         trainer.fit(
             X_train=X_train,
             y_train=y_train,
             X_val=X_val,
             y_val=y_val,
             epochs=training_params["epochs"],
-            eval_on_test=True,
+            eval_on_test=training_params["eval_on_test"],
             k_folds=0,
         )
 

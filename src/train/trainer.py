@@ -57,12 +57,14 @@ class Trainer:
             model: nn.Module, # TODO: Handdle XGBoost models
             loss: nn.Module = nn.MSELoss(reduction="sum"), 
             metric = None, 
-            optimizer: torch.optim.Optimizer | None = None, 
-            device: str | torch.device = 'cpu', 
-            epochs: int = 100,
+            opt: torch.optim.Optimizer | None = None, 
+            device: str | torch.device = DEVICE, 
+            epochs: int = 500,
+            lr: float = 5e-4,
             batch_size: int = 1024,
             name: str = f"{str(uuid.uuid4())}.pt",
-            clip_grad: bool = True
+            clip_grad: bool = True,
+            **kwargs
         ):
         """
         Description:
@@ -79,13 +81,15 @@ class Trainer:
         self.model = model
         self.loss = loss
         self.metric = metric or loss
-        self.optimizer = optimizer or torch.optim.AdamW(params=model.parameters())
+        self.optimizer = opt or torch.optim.AdamW(params=model.parameters(), lr=lr)
         self.device = device
         self.best_model = model
         self.best_score = None
         self.batch_size = batch_size  # Add batch size for mini-batch training
         self.model.to(device)
         self.name = name
+        self.already_trained = False
+
         self.clip_grad = clip_grad
         self.epochs = epochs
 
@@ -97,6 +101,8 @@ class Trainer:
         for layer in model.main:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_normal_(layer.weight)
+        
+        self.load_model()
 
     def fit(
             self, 
@@ -104,10 +110,11 @@ class Trainer:
             y_train: torch.Tensor, 
             X_val: torch.Tensor | None = None,
             y_val: torch.Tensor | None = None,
-            k_folds: int = 5, 
             epochs: int | None = None, 
             eval_on_test: bool = False,
-            split_ratio: float = .9
+            split_ratio: float = .9,
+            force_train: bool = False,
+            k_folds: int = 5
         ):
         """
         Description:
@@ -121,41 +128,53 @@ class Trainer:
             epochs: Number of epochs (for neural networks)
             eval_on_test: Whether to evaluate on the validation set during training
         """
+        if self.already_trained and not force_train:
+            print("Model already trained. Use force_train=True to retrain.")
+            return
+        
         epochs = epochs or self.epochs
 
-        if not isinstance(X, torch.Tensor):
-            X = torch.tensor(X, dtype=torch.float32).to(self.device)
+        if not isinstance(X_train, torch.Tensor):
+            X_train = torch.tensor(X_train, dtype=torch.float32).to(self.device)
         
-        if not isinstance(y, torch.Tensor):
-            y = torch.tensor(y, dtype=torch.float32).to(self.device)
+        if not isinstance(y_train, torch.Tensor):
+            y_train = torch.tensor(y_train, dtype=torch.float32).to(self.device)
+
+        if X_val is not None and not isinstance(X_val, torch.Tensor):
+            X_val = torch.tensor(X_val, dtype=torch.float32).to(self.device)
+        
+        if y_val is not None and not isinstance(y_val, torch.Tensor):
+            y_val = torch.tensor(y_val, dtype=torch.float32).to(self.device)
 
         if k_folds > 1:
+            print("Cross-validation not supported yet.")
+            return self.fit(X_train, y_train, X_val, y_val, epochs, eval_on_test, split_ratio, force_train, k_folds=1)
+            # kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
 
-            kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
-
-            fold_idx = 0
-            models = [ deepcopy(self.model)for _ in range(k_folds) ]
+            # fold_idx = 0
+            # models = [ deepcopy(self.model)for _ in range(k_folds) ]
             
 
-            for train_idx, val_idx in kfold.split(X, y):
-                print(f"Training fold {fold_idx + 1}/{k_folds}...")
-                print("train_idx:", train_idx) # TODO: remove
+            # for train_idx, val_idx in kfold.split(X_train, y_train):
+            #     print(f"Training fold {fold_idx + 1}/{k_folds}...")
+            #     print("train_idx:", train_idx) # TODO: remove
 
-                self.model = models[fold_idx]
-                self.optimizer = torch.optim.AdamW(params=self.model.parameters())
-                X_train, y_train = X[train_idx], y[train_idx]
-                X_val, y_val = X[val_idx], y[val_idx]
+            #     self.model = models[fold_idx]
+            #     self.optimizer = torch.optim.AdamW(params=self.model.parameters())
+            #     X_train, y_train = X[train_idx], y[train_idx]
+            #     X_val, y_val = X[val_idx], y[val_idx]
 
-                train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
-                self._train_nn(train_loader, val_loader, epochs, eval_on_test)
+            #     train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
+            #     self._train_nn(train_loader, val_loader, epochs, eval_on_test)
 
-                fold_idx += 1
+            #     fold_idx += 1
 
         else: 
             # TODO: Random split
-            # idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
-            # X_train, y_train = X[:idx], y[:idx]
-            # X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
+            if eval_on_test and (not X_val or not y_val):
+                idx = int(len(X) * split_ratio) if eval_on_test else len(X) - 1
+                X_train, y_train = X[:idx], y[:idx]
+                X_val, y_val = (X[idx:], y[idx:]) if eval_on_test else (None, None)
             
             train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
             self._train_nn(train_loader, val_loader, epochs, eval_on_test)
@@ -236,7 +255,8 @@ class Trainer:
                     lr_counting = early_stopping.lr_counter
                 )
                 tepoch.update(1)
-                early_stopping(self.val_losses[-1])
+                if eval_on_test:
+                    early_stopping(self.val_losses[-1])
 
                 if early_stopping.save_model:
                     self.save_model(best = True, verbose=False)
@@ -347,6 +367,13 @@ class Trainer:
         # LOAD MODEL
         # model = torch.jit.load('model_scripted.pt')
         # model.eval()
+
+    def load_model(self):
+        if not MODEL_FOLDER.joinpath(self.name).exists():
+            return
+        self.model.load_state_dict(torch.load(MODEL_FOLDER.joinpath(self.name)))
+        self.model.eval()
+        self.already_trained = True
 
     def predict(self, X, pred_strat='n_in_1_out', seq_len=None):
         """

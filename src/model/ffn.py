@@ -8,7 +8,7 @@ from typing import Union, Callable
 class FFNModel(nn.Module):
     def __init__(
             self, 
-            num_features: int = 7,
+            dim_in: int = 7,
             dim_out: int = 6,
             seq_len: int = 1,
             dropout: float = .1,
@@ -20,7 +20,7 @@ class FFNModel(nn.Module):
         super().__init__()
 
         self.main = nn.Sequential(
-            nn.Linear(num_features * seq_len, 64, bias=bias),
+            nn.Linear(dim_in * seq_len, 64, bias=bias),
             nn.Dropout(dropout),
             nn.Sigmoid(),
             nn.Linear(64, 64, bias=bias),

@@ -61,7 +61,7 @@ params = {
 class EncoderModel(nn.Module):
     def __init__(
             self, 
-            num_features: int = 7, 
+            dim_in: int = 7, 
             dim_out: int = 6, 
             seq_len: int = 32,
             num_layers: int = 1,
@@ -94,7 +94,7 @@ class EncoderModel(nn.Module):
         # self.model = nn.TransformerEncoder(dec_layer, num_layers=num_layers)
         # self.ffn = nn.Linear(d_model, num_outputs, bias=bias)
         self.te = nn.Sequential(
-            nn.Linear(num_features, d_model, bias=bias),
+            nn.Linear(dim_in, d_model, bias=bias),
             nn.TransformerEncoder(dec_layer, num_layers=num_layers),
         )
         self.main = nn.Sequential(

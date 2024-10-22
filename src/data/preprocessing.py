@@ -370,7 +370,7 @@ def preprocess(
     # TODO: ENHANCE THE `train_test_split` TO GET A VALIDATION SET WHICH MATCH THE REQUIREMENTS OF THE METRIC
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=.2, shuffle=False)
 
-    print(X_train.shape, y_train.shape, X_val.shape, y_val.shape)
+    print("Shapes:", X_train.shape, y_train.shape, X_val.shape, y_val.shape)
     X_train = torch.Tensor(X_train)
     y_train = torch.Tensor(y_train)
 
