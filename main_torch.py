@@ -46,7 +46,6 @@ if __name__ == "__main__":
         seq_len=seq_len, 
         seq_type="n_in_1_out",
         seq_len_out=1,
-        to_torch=True,
         scaler=StandardScaler(),
         parallelize_seq=True,
         skip_training=False,

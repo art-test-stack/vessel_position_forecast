@@ -111,7 +111,7 @@ def pipeline(
             skip_training=skip_training
         )
     
-    elif model == "xgb":
+    elif isinstance(model, xgb.XGBModel):
         model = xgb_train_part(
             model=model,
             model_params=model_params,
