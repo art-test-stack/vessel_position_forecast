@@ -59,7 +59,7 @@ class MissingFeaturesHandler:
         self.models = models or { 
             feature: Trainer(
                 BaseMissingFeaturesHandler(),
-                name = f"missing_{feature}",
+                name = f"missing_handler/_{feature}",
                 lr = 1e-3
                 # verbose = False
             ) 
