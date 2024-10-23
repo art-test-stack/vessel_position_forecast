@@ -105,11 +105,6 @@ class Trainer:
         self.eval_on_test = eval_on_test
 
         self.verbose = verbose 
-        for layer in model.main:
-            if isinstance(layer, nn.Linear):
-                torch.nn.init.xavier_normal_(layer.weight)
-                if layer.bias is not None:
-                    torch.nn.init.zeros_(layer.bias)
         
         self.early_stopping = EarlyStopping(patience=early_stopping_rounds, min_delta=early_stopping_min_delta)
         
