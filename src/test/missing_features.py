@@ -1,6 +1,6 @@
 from src.train.trainer import Trainer
 from src.data.preprocessing import features_missing, features_input
-
+from settings import MODEL_FOLDER
 import torch
 from torch import nn
 
@@ -54,7 +54,7 @@ class BaseMissingFeaturesHandler(nn.Module):
         if len(x.shape) > 2:
             x = x.reshape(b_size, -1)
         x = self.layer_1(x)
-        out = self.main(x).reshape(b_size, 1)
+        out = self.main(x).reshape(b_size)
 
         return out
 
@@ -67,9 +67,10 @@ class MissingFeaturesHandler:
             # strategy: str = "one_for_each",
             models: Dict[str, Callable] = {}
         ):
-        folder = Path("missing_features/")
+        folder = Path("missing_features_v2/")
         if not folder.exists():
-            folder.mkdir()
+            MODEL_FOLDER.joinpath(folder).mkdir(parents=True, exist_ok=True)
+
         self.features_to_handle = features_to_handle
         self.dim_missing = len(features_to_handle)
         self.models = models or { 

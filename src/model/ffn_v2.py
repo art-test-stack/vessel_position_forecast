@@ -5,7 +5,7 @@ from torch import nn
 from typing import Union, Callable
 
 
-class FFNModel(nn.Module):
+class FFNModelV2(nn.Module):
     def __init__(
             self, 
             dim_in: int = 7,
@@ -18,7 +18,7 @@ class FFNModel(nn.Module):
         ) -> None:
         super().__init__()
 
-        self.main_long = nn.Sequential(
+        self.main = nn.Sequential(
             nn.Linear(dim_in * seq_len, 64, bias=bias),
             nn.Dropout(dropout),
             nn.Sigmoid(),
@@ -28,33 +28,29 @@ class FFNModel(nn.Module):
             nn.Linear(64, 32, bias=bias),
             nn.Dropout(dropout),
             nn.Sigmoid(),
+            # nn.LayerNorm(1, eps=layer_norm_eps),
+            # nn.Sigmoid(),
+        )
+        self.main_long = nn.Sequential(
             nn.Linear(32, 16, bias=bias),
             nn.Dropout(dropout),
             nn.Sigmoid(),
             nn.Linear(16, 1, bias=bias),
             nn.Dropout(dropout),
-            # nn.LayerNorm(1, eps=layer_norm_eps),
-            # nn.Sigmoid(),
         )
         self.main_lat = nn.Sequential(
-            nn.Linear(dim_in * seq_len, 64, bias=bias),
-            nn.Dropout(dropout),
-            nn.Sigmoid(),
-            nn.Linear(64, 64, bias=bias),
-            nn.Dropout(dropout),
-            nn.Sigmoid(),
-            nn.Linear(64, 32, bias=bias),
-            nn.Dropout(dropout),
-            nn.Sigmoid(),
             nn.Linear(32, 16, bias=bias),
             nn.Dropout(dropout),
             nn.Sigmoid(),
             nn.Linear(16, 1, bias=bias),
             nn.Dropout(dropout),
-            # nn.LayerNorm(1, eps=layer_norm_eps),
-            # nn.Sigmoid(),
         )
         
+        for layer in self.main:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_normal_(layer.weight)
+                if layer.bias is not None:
+                    torch.nn.init.zeros_(layer.bias)
         for layer in self.main_long:
             if isinstance(layer, nn.Linear):
                 torch.nn.init.xavier_normal_(layer.weight)
@@ -70,10 +66,10 @@ class FFNModel(nn.Module):
         len_b = x.shape[0]
         if len(x.shape) == 3:
             x = x.reshape(len_b, -1)
-        
-        long = self.main_long(x)
-        lat = self.main_lat(x)
-        return torch.cat([long, lat], dim=1)
+        x = self.main(x)
+        long = self.main_long(x).reshape(-1)
+        lat = self.main_lat(x).reshape(-1)
+        return [long, lat]
 
 
 # main1 = nn.Sequential(

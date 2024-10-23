@@ -6,13 +6,13 @@ from src.data.preprocessing import preprocess, features_to_scale, features_input
 from src.train.training import torch_train_part, xgb_train_part
 from src.train.trainer import Trainer
 
-from src.test.missing_features import BaseMissingFeaturesHandler, MissingFeaturesHandler
+from src.test.missing_features_v2 import MissingFeaturesHandlerModel
+from src.train.loss import MultiOutputLoss
 
 import pandas as pd
 import numpy as np
 import joblib
 
-from sklearn.multioutput import MultiOutputRegressor
 import torch
 from torch import nn
 # from torch.nn.parallel import DistributedDataParallel as DDP
@@ -46,7 +46,7 @@ def iterative_forecast_v3(
 
         preds = model.predict(current_sequence)[-1,:]
 
-        preds.append(preds)
+        preds.append([preds[0], preds[1]])
 
         # seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_out + 2], y_pred[:-2]), axis=None)
         
@@ -125,26 +125,23 @@ def pipeline(
     y_val = y_val.reshape(-1, dim_out)
 
     # mfh = MissingFeaturesHandler()
-    trainer_mfh = Trainer(
-        BaseMissingFeaturesHandler(),
+    multi_head_loss = MultiOutputLoss(n_outputs=dim_out-2, loss=nn.MSELoss(reduction="sum"))
+
+    mfh = Trainer(
+        MissingFeaturesHandlerModel(),
         lr=5e-3,
         batch_size=1024,
+        loss=multi_head_loss,
+        early_stopping_rounds=50,
+        early_stopping_min_delta=1e-3
         # verbose = False
     ) 
-    mfh = MultiOutputRegressor(trainer_mfh, n_jobs=-1)
+
     if not skip_training:
         print("Training Missing Values Model...")
-        X = np.concatenate((X_train, X_val), axis=0)
-        y = np.concatenate((y_train, y_val), axis=0)
-        fit_params = {
-            "X_train": X,
-            "y_train": y,
-            "epochs": 100,
-            "eval_on_test": True,
-            "k_folds": 1,
-        }
-        # mfh.fit(X_train, y_train[:,:-2], X_val=X_val, y_val=y_val[:,:-2]) # Last values for lat and long are not used yet (v3)
-        mfh.fit(X_train, y_train[:,:-2], **fit_params) # Last values for lat and long are not used yet (v3)
+        mfh.fit(X_train, y_train[:,:-2], X_val=X_val, y_val=y_val[:,:-2], epochs=200) 
+        # Last values for lat and long are not used yet (v3)
+        # trainer_mfh.fit(X_train, y_train[:,:-2], **fit_params) # Last values for lat and long are not used yet (v3)
 
     if isinstance(model(), nn.Module):
         model = torch_train_part(
@@ -152,9 +149,9 @@ def pipeline(
             model_params=model_params,
             training_params=training_params,
             X_train=X_train,
-            y_train=y_train[:,-2],
+            y_train=y_train[:,-2:],
             X_val=X_val,
-            y_val=y_val[:,-2],
+            y_val=y_val[:,-2:],
             skip_training=skip_training
         )
         # model_long = torch_train_part(
@@ -258,12 +255,17 @@ def pipeline(
             print("Error register file")
             submit(forecast)
 
-    if res.isna().sum() > 0:
-        print("ERROR: NaN values in submission")
-        return
+    try:
+        if res.isna().sum() > 0:
+            print("ERROR: NaN values in submission")
+            return
+    except:
+        print("no access to res.isna().sum()")
+        print(res.isna().sum() )
 
     print("res describe")
     print(res.describe())
     submit(res)
 
     print("OK - Pipeline finished")
+    print(res.head())

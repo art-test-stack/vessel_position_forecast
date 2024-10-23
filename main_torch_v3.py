@@ -1,14 +1,13 @@
 from settings import *
 from utils import *
 
-from src.model.ffn import FFNModel
+from src.model.ffn_v2 import FFNModelV2
 from src.train.pipeline_v3 import pipeline
+from src.train.loss import MultiOutputLoss
 
 import torch
 from torch import nn
-from datetime import datetime
-import uuid
-from tqdm import tqdm
+
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
@@ -30,19 +29,20 @@ if __name__ == "__main__":
         "seq_len": seq_len,
         "dropout": .4
     }
+
     training_params = {
         "epochs": 1000,
         "lr": 5e-4,
         "opt": torch.optim.Adam,
-        "loss": nn.MSELoss(reduction="sum"),
+        "loss": MultiOutputLoss(n_outputs=2, loss=nn.MSELoss(reduction="sum")),
         "eval_on_test": True,
         "early_stopping_rounds": 100,
         "early_stopping_min_delta": 1e-4,
-        "batch_size": 32,
+        "batch_size": 2048,
     }
     
     pipeline(
-        model=FFNModel,
+        model=FFNModelV2,
         model_params=model_params,
         training_params=training_params,
         do_preprocess=do_preprocess,
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         seq_len_out=1,
         scaler=StandardScaler(),
         parallelize_seq=True,
-        skip_training=True,
+        skip_training=False,
         preprocess_folder=preprocess_file,
         verbose=True,
     )

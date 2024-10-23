@@ -370,8 +370,10 @@ class Trainer:
     def save_model(self, name: str = None, best: bool = False, verbose: bool = True):
         if not name:
             name = self.name
-        if not name[-3 :] == ".pt":
-            name = name + ".pt"
+        if not str(name)[-3:] == ".pt":
+            name = name
+        else:
+            name += ".pt"
 
         model = self.best_model if best else self.model
 

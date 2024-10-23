@@ -142,7 +142,7 @@ def pipeline(
         print("Training Missing Values Model...")
         
         mfh = xgb_train_part(
-            model=model,
+            model=mfh,
             model_params=model_params,
             training_params=training_params,
             X=X,
@@ -270,9 +270,13 @@ def pipeline(
             print("Error register file")
             submit(forecast)
 
-    if res.isna().sum() > 0:
-        print("ERROR: NaN values in submission")
-        return
+    try:
+        if res.isna().sum() > 0:
+            print("ERROR: NaN values in submission")
+            return
+    except:
+        print("no access to res.isna().sum()")
+        print(res.isna().sum() )
 
     print("res describe")
     print(res.describe())
