@@ -4,38 +4,13 @@ import numpy as np
 from typing import Union, List
 
 
-@dataclass
-class DataType:
-    raw_type: str
-    name: str
-    values: list
-
-
-features = [
-    "time_diff",
-
-]
-
-ppfeatures = [
-    "vesselId", 
-    "time",
-    # 'time_diff',
-    'cog',
-    'sog',
-    'rot',
-    'heading',
-    'navstat',
-    # 'etaRaw',
-    'longitude',
-    'latitude',
-]
-
 # TODO: 
 #   - add season columns?
 #   - add hour columns?
 #   - change timestamp to sin?
 #   - pick location data? (from other datasets)
 #   - add time diff with arrival (etaRaw - time)
+
 
 def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
     """

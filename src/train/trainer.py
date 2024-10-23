@@ -67,6 +67,7 @@ class Trainer:
             verbose: bool = True,
             early_stopping_rounds: int = 20,
             early_stopping_min_delta: float = 1e-5,
+            eval_step: int = 1,
             **kwargs
         ):
         """
@@ -99,7 +100,7 @@ class Trainer:
         self.losses = []
         self.val_losses = []
 
-        self.eval_step = 10
+        self.eval_step = eval_step
         
         self.verbose = verbose 
         for layer in model.main:
@@ -110,7 +111,9 @@ class Trainer:
         
         self.early_stopping = EarlyStopping(patience=early_stopping_rounds, min_delta=early_stopping_min_delta)
         
+        print(f"This values are not taken into account: {kwargs}")
         self.load_model()
+
 
     def fit(
             self, 
@@ -367,7 +370,7 @@ class Trainer:
     def save_model(self, name: str = None, best: bool = False, verbose: bool = True):
         if not name:
             name = self.name
-        if not name[:-3] == ".pt":
+        if not name[-3 :] == ".pt":
             name = name + ".pt"
 
         model = self.best_model if best else self.model

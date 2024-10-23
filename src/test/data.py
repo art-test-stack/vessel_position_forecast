@@ -33,7 +33,8 @@ class BaseMissingFeaturesHandler(nn.Module):
             nn.Sigmoid(),
             nn.Linear(hidden_size // 2, dim_out),
             nn.Dropout(dropout),
-            nn.Sigmoid(),
+            nn.LayerNorm(dim_out),
+            # nn.Sigmoid(),
         )
 
     def forward(self, X):
@@ -58,7 +59,8 @@ class MissingFeaturesHandler:
         self.models = models or { 
             feature: Trainer(
                 BaseMissingFeaturesHandler(),
-                name = f"missing_{feature}.pt",
+                name = f"missing_{feature}",
+                lr = 1e-3
                 # verbose = False
             ) 
             # if isinstance(models[feature], nn.Module)

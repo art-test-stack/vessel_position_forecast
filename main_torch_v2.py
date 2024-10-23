@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     dim_in = 20
     dim_out = 7
-    preprocess_file = Path(f"data/preprocessed_v3_seq_{seq_len}/")
+    preprocess_file = Path(f"data/preprocessed_v2_seq_{seq_len}/")
 
     if not preprocess_file.exists():
         preprocess_file.mkdir()
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     }
     training_params = {
         "epochs": 1000,
-        "lr": 5e-3,
+        "lr": 5e-4,
         "opt": torch.optim.Adam,
         "loss": nn.MSELoss(reduction="sum"),
         "eval_on_test": True,
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         seq_len=seq_len, 
         seq_type="n_in_1_out",
         seq_len_out=1,
-        scaler=MinMaxScaler(),
+        scaler=StandardScaler(),
         parallelize_seq=True,
         skip_training=False,
         preprocess_folder=preprocess_file,
