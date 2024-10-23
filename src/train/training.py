@@ -69,41 +69,33 @@ def xgb_train_part(
         model: xgb.XGBRegressor,
         model_params: Dict | None,
         training_params: Dict | None,
-        X_train: np.ndarray | torch.Tensor,
-        y_train: np.ndarray | torch.Tensor,
-        X_val: np.ndarray | torch.Tensor,
-        y_val: np.ndarray | torch.Tensor,
+        X: np.ndarray,
+        y: np.ndarray,
+        # X_train: np.ndarray,
+        # y_train: np.ndarray,
+        # X_val: np.ndarray,
+        # y_val: np.ndarray,
         skip_training: bool = False
     ):
     
-    dim_in = X_train.shape[-1]
-    dim_out = y_train.shape[-1]
-    seq_len = X_train.shape[1]
+    dim_in = X.shape[-1]
+    dim_out = y.shape[-1]
+    seq_len = X.shape[1]
 
-    X_train = X_train.numpy() if isinstance(X_train, torch.Tensor) else X_train
-    X_val = X_val.numpy() if isinstance(X_val, torch.Tensor) else X_val
-    y_train = y_train.numpy() if isinstance(y_train, torch.Tensor) else y_train
-    y_val = y_val.numpy() if isinstance(y_val, torch.Tensor) else y_val
-
-    xgb_reg = model(
-        device="cuda"
-    )
+    # xgb_reg = model(
+    #     device="cuda"
+    # )
     grid_search = GridSearchCV(
-        xgb_reg,
+        model,
         param_grid=model_params,
         **training_params
     )
 
-    X_train = X_train.reshape(-1, dim_in * seq_len)
-    X_val = X_val.reshape(-1, dim_in * seq_len)
-    y_train = y_train.reshape(-1, dim_out)
-    y_val = y_val.reshape(-1, dim_out)
-
     if not skip_training:
         grid_search.fit(
-            X_train,
-            y_train,
-            eval_set=[(X_train, y_train), (X_val, y_val)],
+            X,
+            y,
+            # eval_set=[(X_train, y_train), (X_val, y_val)],
             verbose=4
         )
 
@@ -133,11 +125,11 @@ def xgb_train_part(
     try:
         model = grid_search.best_estimator_
         print("Best model params:", grid_search.best_params_)
-        score = model.score(X_val, y_val)
+        score = model.score(X, y)
         print("Score on validation set for best model:", score)
         model = grid_search.best_estimator_
         print("Best model params:", grid_search.best_params_)
-        score = model.score(X_val, y_val)
+        score = model.score(X, y)
         print("Score on validation set for best model:", score)
     except:
         print("Score ???")
@@ -184,19 +176,19 @@ def xgb_train_part(
     if not skip_training:
         print("Start training...")
         model.fit(
-            X_train,
-            y_train,
-            eval_set=[(X_train, y_train), (X_val, y_val)],
-            verbose=True
+            X,
+            y,
+            # eval_set=[(X_train, y_train), (X_val, y_val)],
+            verbose=4
         )
 
     
     try:
-        score = model.score(X_val, y_val)
+        score = model.score(X, y)
         print("Score on validation set (rmse):", np.sqrt(score))
     except:
         try:
-            score = model.score(X_val, y_val)
+            score = model.score(X, y)
             print("Score on validation set (rmse):", np.sqrt(score.cpu().numpy()))
         except:
             print("Score ???")
