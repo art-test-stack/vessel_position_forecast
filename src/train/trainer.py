@@ -86,7 +86,7 @@ class Trainer:
         self.model = model
         self.loss = loss
         self.metric = metric or loss
-        self.optimizer = opt or torch.optim.AdamW(params=model.parameters(), lr=lr)
+        self.optimizer = opt or torch.optim.Adam(params=model.parameters(), lr=lr)
         self.device = device
         self.best_model = model
         self.best_score = None
@@ -95,7 +95,7 @@ class Trainer:
         self.name = name
         self.already_trained = False
 
-        self.clip_grad = clip_grad
+        self.clip_grad = clip_grad 
         self.epochs = epochs
 
         self.losses = []

@@ -13,8 +13,8 @@ class MissingFeaturesHandlerModel(nn.Module):
     def __init__(
             self, 
             dim_in: int = len(features_input), 
-            hidden_size: int = 16, 
-            num_layers: int = 4,
+            hidden_size: int = 128, 
+            num_layers: int = 2,
             dim_out: int = 5,
             dropout: float = 0.2,
         ):
@@ -28,7 +28,7 @@ class MissingFeaturesHandlerModel(nn.Module):
             batch_first=True,
             dropout=dropout
         )
-        self.main = [ 
+        self.main = nn.ModuleList([ 
             nn.Sequential(
             nn.Linear(hidden_size, hidden_size // 2),
             nn.Dropout(dropout),
@@ -36,10 +36,10 @@ class MissingFeaturesHandlerModel(nn.Module):
             nn.Linear(hidden_size // 2, 1),
             nn.Dropout(dropout),
             ) for _ in range(dim_out)
-        ]
+        ])
         self.dim_out = dim_out
 
-        [ self.main[k].to(DEVICE) for k in range(dim_out) ]
+        # [ self.main[k].to(DEVICE) for k in range(dim_out) ]
 
         for name, param in self.lstm.named_parameters():
             if 'bias' in name:
@@ -55,7 +55,7 @@ class MissingFeaturesHandlerModel(nn.Module):
         out, _ = self.lstm(x, (h0, c0))
 
 
-        out = [self.main[k](out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for k in range(self.dim_out)]
+        out = [layer(out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for layer in self.main]
 
         # b_size = x.shape[0]
         # if len(x.shape) > 2:
