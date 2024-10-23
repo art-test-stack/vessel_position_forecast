@@ -38,9 +38,9 @@ def iterative_forecast_with_features_handler(
 
     for k in range(steps):
         last_seq_item = missing_features_handler(current_sequence)
-        seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_missing], last_seq_item), axis=None)
 
-        current_sequence = seq[k+1:k+1+seq_len].reshape(1, seq_len, dim_in)
+        seq[seq_len+k] = np.concatenate((seq[seq_len+k][:dim_in-dim_missing], last_seq_item), axis=None)
+        current_sequence = seq[k+1:seq_len+k+1,:].reshape(1, seq_len, dim_in)
         y_pred = model.predict(current_sequence)[-1,:]
 
         preds.append(y_pred)
@@ -48,7 +48,6 @@ def iterative_forecast_with_features_handler(
         # seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_out + 2], y_pred[:-2]), axis=None)
         
         # current_sequence = seq[k+1:k+1+seq_len].reshape(1, seq_len, dim_in)
-
     return preds
 
 
@@ -125,7 +124,7 @@ def pipeline(
     print("Training Missing Values Model...")
     mfh = MissingFeaturesHandler()
     if not skip_training:
-        mfh.fit(X_train, y_train[:, :-2], X_val=X_val, y_val=y_val[:,:-2]) # Last values for lat and long are not used yet (v3)
+        mfh.fit(X_train, y_train[:,:-2], X_val=X_val, y_val=y_val[:,:-2]) # Last values for lat and long are not used yet (v3)
 
     if isinstance(model(), nn.Module):
         model = torch_train_part(

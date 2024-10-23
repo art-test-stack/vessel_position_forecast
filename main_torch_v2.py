@@ -50,7 +50,7 @@ if __name__ == "__main__":
         seq_len_out=1,
         scaler=StandardScaler(),
         parallelize_seq=True,
-        skip_training=False,
+        skip_training=True,
         preprocess_folder=preprocess_file,
         verbose=True,
     )

@@ -26,7 +26,7 @@ def create_time_diff_feature(df: pd.DataFrame) -> pd.DataFrame:
         df
         .sort_values(by=['time'])
         .groupby("vesselId")['time']
-        .diff(-1)
+        .diff(1)
         .abs()
         .dropna()
         .dt.total_seconds()

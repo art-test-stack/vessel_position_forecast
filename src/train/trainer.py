@@ -68,6 +68,7 @@ class Trainer:
             early_stopping_rounds: int = 20,
             early_stopping_min_delta: float = 1e-5,
             eval_step: int = 1,
+            eval_on_test: bool = True,
             **kwargs
         ):
         """
@@ -101,7 +102,8 @@ class Trainer:
         self.val_losses = []
 
         self.eval_step = eval_step
-        
+        self.eval_on_test = eval_on_test
+
         self.verbose = verbose 
         for layer in model.main:
             if isinstance(layer, nn.Linear):
@@ -111,7 +113,8 @@ class Trainer:
         
         self.early_stopping = EarlyStopping(patience=early_stopping_rounds, min_delta=early_stopping_min_delta)
         
-        print(f"This values are not taken into account: {kwargs}")
+        if kwargs:
+            print(f"This values are not taken into account: {kwargs}")
         self.load_model()
 
 
@@ -122,7 +125,7 @@ class Trainer:
             X_val: torch.Tensor | None = None,
             y_val: torch.Tensor | None = None,
             epochs: int | None = None, 
-            eval_on_test: bool = True,
+            eval_on_test: bool | None = None,
             split_ratio: float = .9,
             force_train: bool = False,
             k_folds: int = 5
@@ -139,6 +142,8 @@ class Trainer:
             epochs: Number of epochs (for neural networks)
             eval_on_test: Whether to evaluate on the validation set during training
         """
+        eval_on_test = eval_on_test or self.eval_on_test
+
         if self.already_trained and not force_train:
             print("Model already trained. Use force_train=True to retrain.")
             return
