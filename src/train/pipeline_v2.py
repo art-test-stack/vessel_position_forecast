@@ -218,6 +218,9 @@ def pipeline(
             print("Error register file")
             submit(forecast)
 
+    if res.isna().sum() > 0:
+        print("ERROR: NaN values in submission")
+        return
 
     print("res describe")
     print(res.describe())

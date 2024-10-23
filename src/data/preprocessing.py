@@ -305,6 +305,8 @@ def preprocess(
         print("Concat train and test sets...")
     df = concat_train_test_sets(df_train, df_test, features_raw)
 
+    print(len(df))
+    print('df.isna', df.isna().sum())
     # CLEAN DATA (future)
     # - look for options (z-score?)
     # - data augmentation (add samples when time_diff > threshold)
@@ -323,7 +325,7 @@ def preprocess(
     df = create_heading_features(df)
     df = sog_feature(df)
     df = create_rot_features(df)
-
+    print('df.isna', df.isna().sum())
     if plot_corr_matrix:
         try:
             plot_correlation_matrix(df, features_input, features_output)
@@ -331,6 +333,9 @@ def preprocess(
             print(f"Error while plotting correlation matrix: {e}")
 
     train_set, test_set = split_train_test_sets(df)
+
+    train_set = train_set.dropna()
+    print('trainset na', train_set.isna().sum())
 
     # TODO: Look for better way to normalize
     if normalize: 
