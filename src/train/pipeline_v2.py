@@ -5,7 +5,7 @@ from src.data.preprocessing import preprocess, features_to_scale, features_input
 
 from src.train.training import torch_train_part, xgb_train_part
 
-from src.test.data import MissingFeaturesHandler
+from src.test.missing_features import MissingFeaturesHandler
 
 import pandas as pd
 import numpy as np

@@ -269,7 +269,7 @@ class Trainer:
                     loss = self.losses[-1] if self.losses else "?",
                     val_loss = self.val_losses[-1] if self.val_losses else "?",
                     best = self.best_score if self.best_score else "?",
-                    early_stopping_step = self.early_stopping.counter,
+                    stopping_step = f"{self.early_stopping.counter} / {self.early_stopping.patience}",
                     lr_counting = self.early_stopping.lr_counter
                 ) if eval_on_test else tepoch.set_postfix(
                     loss = self.losses[-1] if self.losses else "?"
@@ -279,7 +279,7 @@ class Trainer:
                     self.early_stopping(self.val_losses[-1])
 
                 if self.early_stopping.save_model:
-                    self.save_model(best = True, verbose=False)
+                    self.save_model(best=True, verbose=False)
 
                 if self.early_stopping.early_stop:
                     print(f"Early stopping at epoch {epoch}")
