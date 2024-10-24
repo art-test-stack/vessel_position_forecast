@@ -1,8 +1,11 @@
 from settings import *
 from utils import *
 
-from src.model.ffn import FFNModel
+from src.model.ffn_v2 import FFNModelV2
+from src.model.lstm import LSTMPredictor
+
 from src.train.pipeline_v1 import pipeline
+from src.train.loss import MultiOutputLoss
 
 import torch
 from torch import nn
@@ -15,7 +18,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 if __name__ == "__main__":
     seq_len = 8
-    do_preprocess = False
+    do_preprocess = True
 
     dim_in = 20
     dim_out = 7
@@ -34,12 +37,12 @@ if __name__ == "__main__":
         "epochs": 1000,
         "lr": 5e-4,
         "opt": torch.optim.Adam,
-        "loss": nn.MSELoss(reduction="sum"),
+        "loss": MultiOutputLoss(nn.MSELoss),
         "eval_on_test": True,
     }
     
     pipeline(
-        model=FFNModel,
+        model=LSTMPredictor,
         model_params=model_params,
         training_params=training_params,
         do_preprocess=do_preprocess,
