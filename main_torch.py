@@ -18,7 +18,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 if __name__ == "__main__":
     seq_len = 8
-    do_preprocess = True
+    do_preprocess = False
 
     dim_in = 20
     dim_out = 7
@@ -37,8 +37,10 @@ if __name__ == "__main__":
         "epochs": 1000,
         "lr": 5e-4,
         "opt": torch.optim.Adam,
-        "loss": MultiOutputLoss(nn.MSELoss),
+        "loss": MultiOutputLoss(loss=nn.MSELoss(reduction="sum")),
         "eval_on_test": True,
+        "early_stopping_rounds": 100,
+        "early_stopping_min_delta": 1e-4,
     }
     
     pipeline(

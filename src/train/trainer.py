@@ -261,9 +261,9 @@ class Trainer:
                     self._update_best_model(val_loss)
                 
                 tepoch.set_postfix(
-                    loss = self.losses[-1] if self.losses else "?",
-                    val_loss = self.val_losses[-1] if self.val_losses else "?",
-                    best = self.best_score if self.best_score else "?",
+                    _loss = self.losses[-1] if self.losses else "?",
+                    _val_loss = self.val_losses[-1] if self.val_losses else "?",
+                    _best = self.best_score if self.best_score else "?",
                     stopping_step = f"{self.early_stopping.counter} / {self.early_stopping.patience}",
                     lr_counting = self.early_stopping.lr_counter
                 ) if eval_on_test else tepoch.set_postfix(
@@ -443,9 +443,14 @@ class Trainer:
             # else:
             #     raise ValueError(f"Unknown prediction strategy: {pred_strat}")
 
-            return self.model(x).cpu().numpy()
-
-
+            raw_pred = self.model(x)
+            if isinstance(raw_pred, list):
+                pred = torch.stack(raw_pred, dim=1).cpu().numpy()
+            else:
+                pred = raw_pred
+            return pred
+            
+            
     def _n_in_1_out(self, X):
         # Example implementation for 'n in, 1 out' strategy
         predictions = []

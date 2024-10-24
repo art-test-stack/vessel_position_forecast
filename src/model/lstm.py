@@ -33,6 +33,9 @@ class LSTMPredictor(nn.Module):
             nn.Linear(hidden_size, hidden_size // 2),
             nn.Dropout(dropout),
             nn.Sigmoid(),
+            nn.Linear(hidden_size // 2, hidden_size // 2),
+            nn.Dropout(dropout),
+            nn.Sigmoid(),
             nn.Linear(hidden_size // 2, 1),
             nn.Dropout(dropout),
             ) for _ in range(dim_out)

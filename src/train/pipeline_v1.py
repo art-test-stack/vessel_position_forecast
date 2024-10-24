@@ -108,6 +108,9 @@ def pipeline(
     dim_in = X_train.shape[-1]
     dim_out = y_train.shape[-1]
 
+    y_train = y_train.reshape(X_train.shape[0], dim_out)
+    y_val = y_val.reshape(X_val.shape[0], dim_out)
+    
     if isinstance(model(), nn.Module):
         model = torch_train_part(
             model=model,
