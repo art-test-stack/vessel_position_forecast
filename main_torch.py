@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "epochs": 1000,
         "lr": 5e-4,
         "opt": torch.optim.Adam,
-        "loss": MultiOutputLoss(nn.MSELoss),
+        "loss": MultiOutputLoss(loss=nn.MSELoss(reduction="sum")),
         "eval_on_test": True,
     }
     

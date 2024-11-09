@@ -12,7 +12,7 @@ class LSTMPredictor(nn.Module):
     def __init__(
             self, 
             dim_in: int = len(features_input), 
-            hidden_size: int = 128, 
+            hidden_size: int = 64, 
             num_layers: int = 2,
             dim_out: int = 5,
             dropout: float = 0.2,
@@ -28,12 +28,20 @@ class LSTMPredictor(nn.Module):
             batch_first=True,
             dropout=dropout
         )
-        self.main = nn.ModuleList([ 
-            nn.Sequential(
+        self.linear = nn.Sequential(
             nn.Linear(hidden_size, hidden_size // 2),
             nn.Dropout(dropout),
             nn.Sigmoid(),
-            nn.Linear(hidden_size // 2, 1),
+            nn.Linear(hidden_size // 2, hidden_size // 2),
+            nn.Dropout(dropout),
+        )
+
+        self.main = nn.ModuleList([ 
+            nn.Sequential(
+            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.Dropout(dropout),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size // 4, 1),
             nn.Dropout(dropout),
             ) for _ in range(dim_out)
         ])
@@ -54,8 +62,10 @@ class LSTMPredictor(nn.Module):
         
         out, _ = self.lstm(x, (h0, c0))
 
-
-        out = [layer(out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for layer in self.main]
+        out = self.linear(out[:, -1, :])
+        out = [ layer(out).reshape(-1) for layer in self.main ]
+        # out = [layer(out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for layer in self.main]
+        # out = [layer(out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for layer in self.main]
 
         # b_size = x.shape[0]
         # if len(x.shape) > 2:
