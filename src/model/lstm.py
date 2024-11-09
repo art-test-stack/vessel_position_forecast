@@ -38,7 +38,10 @@ class LSTMPredictor(nn.Module):
 
         self.main = nn.ModuleList([ 
             nn.Sequential(
-            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.Dropout(dropout),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size // 2, hidden_size // 2),
             nn.Dropout(dropout),
             nn.Sigmoid(),
             nn.Linear(hidden_size // 4, 1),
