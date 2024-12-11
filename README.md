@@ -19,7 +19,7 @@ Our team’s careful selection of predictive features, coupled with the compleme
 
 ## XGBoost Model
 
-This section presents a machine learning model that predicts vessel positions over time using Automatic Identification System (AIS) data. Building on a Random Forest-based approach, this version introduces an XGBoost regressor, enhancing accuracy and handling for multi-target predictions of latitude and longitude. The workflow includes data preprocessing, feature engineering, model training, hyperparameter tuning, and future position forecasting.
+This section presents a machine learning model that predicts vessel positions over time using AIS data. Building on a Random Forest-based approach, this version introduces an XGBoost regressor, enhancing accuracy and handling for multi-target predictions of latitude and longitude. The workflow includes data preprocessing, feature engineering, model training, hyperparameter tuning, and future position forecasting.
 
 ### Model Overview
 #### Data Preparation and Preprocessing
@@ -81,7 +81,7 @@ y_pred_default_df = pd.DataFrame(y_pred_default, columns['latitude_predicted', '
 
 ## Random Regressor
 
-This section offers a comprehensive overview of the machine learning model employed to forecast the trajectories of vessels utilizing Automatic Identification System (AIS) data. This program is designed to predict future vessel positions based on historical AIS (Automatic Identification System) data. The main approach involves training two separate regression models using a Random Forest Regressor to predict latitude and longitude independently. The program includes multiple steps: data preprocessing, feature engineering, model training, validation, and position prediction for future timestamps.
+This section offers a comprehensive overview of the machine learning model employed to forecast the trajectories of vessels utilizing AIS data. This program is designed to predict future vessel positions based on historical AIS data. The main approach involves training two separate regression models using a Random Forest Regressor to predict latitude and longitude independently. The program includes multiple steps: data preprocessing, feature engineering, model training, validation, and position prediction for future timestamps.
 
 ### Model Overview
 
