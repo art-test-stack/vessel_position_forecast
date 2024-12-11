@@ -4,7 +4,7 @@
 The AIS Vessel Trajectory Prediction project leverages Automatic Identification System (AIS) data to forecast future vessel positions, aiming to support maritime navigation, improve traffic management, and enhance safety. AIS data, which records continuous real-time updates on vessel attributes like position, speed, and heading, offers rich insights essential for predicting vessel movement patterns. Using data from January 1 to May 7, 2024, our goal is to accurately forecast vessel locations for up to five days in the future, with the aim of outperforming at least five competing teams on the project leaderboard.
 
 ### Model Selection
-Our approach incorporates two machine learning models: \textbf{XGBoost} and \textbf{Random Forest Regressor}, both of which are well-suited to handling the structured, temporal, and non-linear nature of AIS data. 
+Our approach incorporates two machine learning models: **XGBoost** and **Random Forest Regressor**, both of which are well-suited to handling the structured, temporal, and non-linear nature of AIS data. 
 
 **XGBoost Model**: XGBoost is a gradient boosting algorithm that iteratively builds decision trees to minimize errors and capture intricate relationships in data. For AIS data, XGBoost’s stepwise learning approach helps identify subtle changes in vessel movement, such as speed fluctuations or course adjustments, which are crucial for short- and mid-term predictions. We fine-tuned its hyperparameters to prioritize features with high predictive value—such as recent speed, heading, and position—while minimizing noise.
 
@@ -73,7 +73,7 @@ using a parameters grid like above. The GridSearch cross validation library try 
 
 ### Future Position Prediction
 
-For each vessel in the test set, the model predicts future positions based on the most recent known data. Predictions are stored in a DataFrame, capturing both latitude\_predicted and longitude\_predicted. Each vessel's position is forecasted stepwise over a predefined interval:
+For each vessel in the test set, the model predicts future positions based on the most recent known data. Predictions are stored in a DataFrame, capturing both `latitude_predicted` and `longitude_predicted`. Each vessel's position is forecasted stepwise over a predefined interval:
 ```python
 y_pred_default = grid_search.predict(X_test)
 y_pred_default_df = pd.DataFrame(y_pred_default, columns['latitude_predicted', 'longitude_predicted'])
@@ -125,7 +125,7 @@ y_lon = train_data['longitude']
 ```
 
 
-Then, it divides the data into training and validation sets, which helps to evaluate model performance: \\
+Then, it divides the data into training and validation sets, which helps to evaluate model performance: 
 ```python
 X_lat_train, X_lat_val, y_lat_train, y_lat_val = train_test_split(X, y_lat, test_size=0.1, random_state=42)
 ```
@@ -146,13 +146,13 @@ Afterwards, the model's accuracy is evaluated using Mean Absolute Error (MAE) on
 
 The error distribution plots for latitude and longitude predictions show the spread of errors in predicting these two values. In both cases, the distributions are sharply peaked around zero, indicating that most predictions are very close to the true values, with only a small number of errors at greater magnitudes. 
 
-The learning curve shows the model's performance as the size of the training set increases. Both the training and validation errors decrease as more data is added, indicating that the model benefits from additional data. The gap between the training error (blue line) and validation error (orange line) suggests some degree of generalization challenge, as the validation error remains higher than the training error. However, the continuous decrease in validation error with more data suggests that the model’s performance could further improve with additional training data\\
+The learning curve shows the model's performance as the size of the training set increases. Both the training and validation errors decrease as more data is added, indicating that the model benefits from additional data. The gap between the training error (blue line) and validation error (orange line) suggests some degree of generalization challenge, as the validation error remains higher than the training error. However, the continuous decrease in validation error with more data suggests that the model’s performance could further improve with additional training data
 
 Overall, these plots indicate that the model has a strong prediction capability, with low errors across most cases, though additional data might still help it generalize even better.
 
-\subsection{Prediction of Future Positions}
-\subsubsection{Future Position Prediction}
-For each vessel in the test dataset, the program uses the most recent data points to predict future positions based on the elapsed time (time\_diff\_seconds). It calculates prev\_* features similarly to the training phase, then passes these into the trained models to obtain latitude and longitude predictions. \\
+### Prediction of Future Positions
+
+For each vessel in the test dataset, the program uses the most recent data points to predict future positions based on the elapsed time (`time_diff_seconds`). It calculates prev_* features similarly to the training phase, then passes these into the trained models to obtain latitude and longitude predictions. 
 
 ```python
 predicted_lat = model_lat.predict([list(prediction_data.values())])[0]
