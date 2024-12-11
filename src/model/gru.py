@@ -8,7 +8,7 @@ import numpy as np
 from typing import Callable, Dict, List
 from pathlib import Path
 
-class LSTMPredictor(nn.Module):
+class GRUPredictor(nn.Module):
     def __init__(
             self, 
             dim_in: int = len(features_input), 
@@ -21,7 +21,7 @@ class LSTMPredictor(nn.Module):
         super().__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(
+        self.gru = nn.GRU(
             dim_in,
             hidden_size, 
             num_layers, 
@@ -50,7 +50,7 @@ class LSTMPredictor(nn.Module):
 
         # [ self.main[k].to(DEVICE) for k in range(dim_out) ]
 
-        for name, param in self.lstm.named_parameters():
+        for name, param in self.gru.named_parameters():
             if 'bias' in name:
                 nn.init.constant_(param, 0.0)
             elif 'weight' in name:
@@ -59,9 +59,10 @@ class LSTMPredictor(nn.Module):
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        # c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
         
-        out, _ = self.lstm(x, (h0, c0))
+        out, _ = self.gru(x, h0)
+        # out, _ = self.gru(x, (h0, c0))
 
         out = self.linear(out[:, -1, :])
         out = [ layer(out).reshape(-1) for layer in self.main ]

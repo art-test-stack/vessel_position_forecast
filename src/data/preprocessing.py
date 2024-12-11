@@ -323,7 +323,7 @@ def preprocess(
     df = create_heading_features(df)
     df = sog_feature(df)
     df = create_rot_features(df)
-    print('df.isna', df.isna().sum())
+    
     if plot_corr_matrix:
         try:
             plot_correlation_matrix(df, features_input, features_output)

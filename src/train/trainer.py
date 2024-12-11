@@ -45,8 +45,9 @@ class EarlyStopping:
         else:
             self.counter += 1
             self.lr_counter += 1
-            if self.lr_counter >= self.patience // 2:
+            if self.lr_counter >= self.patience // 4:
                 self.reduce_lr = True
+                self.lr_counter = 0
             if self.counter >= self.patience:
                 self.early_stop = True
 
@@ -85,7 +86,7 @@ class Trainer:
         """
         self.model = model
         self.loss = loss
-        self.metric = metric or loss
+        self.metric = nn.MSELoss(reduction="sum") # metric or loss
         self.optimizer = opt or torch.optim.Adam(params=model.parameters(), lr=lr)
         self.device = device
         self.best_model = model
@@ -260,6 +261,9 @@ class Trainer:
                     val_loss = self._evaluate_nn(val_loader)
                     self._update_best_model(val_loss)
                 
+                if eval_on_test and (epoch % self.eval_step == 0):
+                    self.early_stopping(self.val_losses[-1])
+
                 tepoch.set_postfix(
                     _loss = self.losses[-1] if self.losses else "?",
                     _val_loss = self.val_losses[-1] if self.val_losses else "?",
@@ -270,9 +274,6 @@ class Trainer:
                     loss = self.losses[-1] if self.losses else "?"
                 )
                 tepoch.update(1)
-                if eval_on_test and (epoch % self.eval_step == 0):
-                    self.early_stopping(self.val_losses[-1])
-
                 if self.early_stopping.save_model:
                     self.save_model(best=True, verbose=False)
 
@@ -304,7 +305,8 @@ class Trainer:
             for inputs, targets in val_loader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
-                loss = self.metric(outputs, targets)
+                # TO BE FIXED
+                loss = self.loss(outputs, targets)
                 running_val_loss += loss.item()
 
         avg_val_loss = running_val_loss / val_loader.dataset.__len__()
@@ -482,8 +484,11 @@ class Trainer:
             y_test: Test targets
         """
         y_pred = self.predict(X_test)
+        print('y_pred.shape', y_pred.shape)
+        print('y_test.shape', y_test.shape)
+
         y_pred = torch.Tensor(y_pred).to(self.device)
-        return self.metric(y_test, y_pred)
+        return self.metric(y_test, y_pred) / y_pred.shape[0]
     
 
 

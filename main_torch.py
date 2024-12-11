@@ -3,6 +3,7 @@ from utils import *
 
 from src.model.ffn_v2 import FFNModelV2
 from src.model.lstm import LSTMPredictor
+from src.model.gru import GRUPredictor
 
 from src.train.pipeline_v1 import pipeline
 from src.train.loss import MultiOutputLoss
@@ -17,12 +18,12 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
 if __name__ == "__main__":
-    seq_len = 8
+    seq_len = 16
     do_preprocess = False
 
     dim_in = 20
     dim_out = 7
-    preprocess_file = Path(f"data/preprocessed_last_rot_{seq_len}/")
+    preprocess_file = Path(f"data/preprocessed_seq_len_{seq_len}/")
 
     if not preprocess_file.exists():
         preprocess_file.mkdir()
@@ -31,7 +32,7 @@ if __name__ == "__main__":
 
     model_params = {
         "seq_len": seq_len,
-        "dropout": .4
+        "dropout": .3
     }
     training_params = {
         "epochs": 1000,
@@ -39,12 +40,12 @@ if __name__ == "__main__":
         "opt": torch.optim.Adam,
         "loss": MultiOutputLoss(loss=nn.MSELoss(reduction="sum")),
         "eval_on_test": True,
-        "early_stopping_rounds": 100,
+        "early_stopping_rounds": 400,
         "early_stopping_min_delta": 1e-4,
     }
     
     pipeline(
-        model=LSTMPredictor,
+        model=GRUPredictor,
         model_params=model_params,
         training_params=training_params,
         do_preprocess=do_preprocess,
