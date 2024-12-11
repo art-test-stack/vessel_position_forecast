@@ -65,11 +65,6 @@ class LSTMPredictor(nn.Module):
 
         out = self.linear(out[:, -1, :])
         out = [ layer(out).reshape(-1) for layer in self.main ]
-        # b_size = x.shape[0]
-        # if len(x.shape) > 2:
-        #     x = x.reshape(b_size, -1)
-        # x = self.layer_1(x)
-        # out = self.main(x).reshape(b_size, 1)
 
         return out
 

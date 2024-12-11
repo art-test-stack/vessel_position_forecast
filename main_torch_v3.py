@@ -11,7 +11,6 @@ from torch import nn
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
-
 if __name__ == "__main__":
     seq_len = 8
     do_preprocess = False
@@ -23,7 +22,6 @@ if __name__ == "__main__":
     if not preprocess_file.exists():
         preprocess_file.mkdir()
         do_preprocess = True
-    # TODO: ADD DROPOUT ARG
 
     model_params = {
         "seq_len": seq_len,

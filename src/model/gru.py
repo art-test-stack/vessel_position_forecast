@@ -48,8 +48,6 @@ class GRUPredictor(nn.Module):
         ])
         self.dim_out = dim_out
 
-        # [ self.main[k].to(DEVICE) for k in range(dim_out) ]
-
         for name, param in self.gru.named_parameters():
             if 'bias' in name:
                 nn.init.constant_(param, 0.0)

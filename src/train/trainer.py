@@ -124,7 +124,6 @@ class Trainer:
             eval_on_test: bool | None = None,
             split_ratio: float = .9,
             force_train: bool = False,
-            k_folds: int = 5
         ):
         """
         Description:
@@ -158,39 +157,13 @@ class Trainer:
         if y_val is not None and not isinstance(y_val, torch.Tensor):
             y_val = torch.tensor(y_val, dtype=torch.float32).to(self.device)
 
-        if k_folds > 1:
-            if self.verbose and False:
-                print("Cross-validation not supported yet.")
-            return self.fit(X_train, y_train, X_val, y_val, epochs, eval_on_test, split_ratio, force_train, k_folds=1)
-            # kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
-
-            # fold_idx = 0
-            # models = [ deepcopy(self.model)for _ in range(k_folds) ]
-            
-
-            # for train_idx, val_idx in kfold.split(X_train, y_train):
-            #     print(f"Training fold {fold_idx + 1}/{k_folds}...")
-            #     print("train_idx:", train_idx) # TODO: remove
-
-            #     self.model = models[fold_idx]
-            #     self.optimizer = torch.optim.AdamW(params=self.model.parameters())
-            #     X_train, y_train = X[train_idx], y[train_idx]
-            #     X_val, y_val = X[val_idx], y[val_idx]
-
-            #     train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
-            #     self._train_nn(train_loader, val_loader, epochs, eval_on_test)
-
-            #     fold_idx += 1
-
-        else: 
-            # TODO: Random split
-            if eval_on_test and X_val is None and y_val is None:
-                idx = int(len(X_train) * split_ratio) # if eval_on_test else len(X) - 1
-                X_train, y_train = X_train[:idx], y_train[:idx]
-                X_val, y_val = (X_train[idx:], y_train[idx:]) #  if eval_on_test else (None, None)
-            
-            train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
-            self._train_nn(train_loader, val_loader, epochs, eval_on_test)
+        if eval_on_test and X_val is None and y_val is None:
+            idx = int(len(X_train) * split_ratio) # if eval_on_test else len(X) - 1
+            X_train, y_train = X_train[:idx], y_train[:idx]
+            X_val, y_val = (X_train[idx:], y_train[idx:]) #  if eval_on_test else (None, None)
+        
+        train_loader, val_loader = self._prepare_dataloaders(X_train, y_train, X_val, y_val, eval_on_test)
+        self._train_nn(train_loader, val_loader, epochs, eval_on_test)
         
         # REINITIALIZE EARLY STOPPING
         self.early_stopping = EarlyStopping(self.early_stopping.patience, self.early_stopping.min_delta)

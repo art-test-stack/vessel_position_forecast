@@ -116,14 +116,3 @@ class EncoderModel(nn.Module):
         if self.act_out is not None:
             return self.act_out(out)
         return out
-
-
-    # def get_pad_mask(self, seq: torch.Tensor):
-
-    #     pad_idx = 0 # self.padding_idx
-    #     pad_mask = (seq != pad_idx).unsqueeze(-2)
-
-    #     _, len_s = seq.size()
-    #     subsequent_mask = (1 - torch.triu(
-    #         torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
-    #     return pad_mask & subsequent_mask

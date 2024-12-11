@@ -56,13 +56,6 @@ class MissingFeaturesHandlerModel(nn.Module):
 
 
         out = [layer(out[:, -1, :].reshape(x.size(0), -1)).reshape(-1) for layer in self.main]
-
-        # b_size = x.shape[0]
-        # if len(x.shape) > 2:
-        #     x = x.reshape(b_size, -1)
-        # x = self.layer_1(x)
-        # out = self.main(x).reshape(b_size, 1)
-
         return out
 
     

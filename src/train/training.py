@@ -95,7 +95,6 @@ def xgb_train_part(
         grid_search.fit(
             X,
             y,
-            # eval_set=[(X_train, y_train), (X_val, y_val)],
             verbose=4
         )
 

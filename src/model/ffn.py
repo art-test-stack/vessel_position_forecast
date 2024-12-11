@@ -45,32 +45,3 @@ class FFNModel(nn.Module):
         
         out = self.main(x)
         return out
-
-
-# main1 = nn.Sequential(
-#     nn.Linear(num_features * seq_len, 128, bias=bias),
-#     nn.Dropout(dropout),
-#     # nn.LayerNorm(64, eps=layer_norm_eps),
-#     nn.LayerNorm(128),
-#     nn.ReLU(),
-#     nn.Linear(128, 64, bias=bias),
-#     nn.Dropout(dropout),
-#     nn.LayerNorm(64),
-#     # nn.ReLU(),
-#     # nn.Linear(64, 64, bias=bias),
-#     # nn.Dropout(dropout),
-#     # nn.LayerNorm(64),
-#     nn.ReLU(),
-#     nn.Linear(64, 32, bias=bias),
-#     nn.Dropout(dropout),
-#     nn.LayerNorm(32),
-#     nn.ReLU(),
-#     nn.Linear(32, 16, bias=bias),
-#     nn.Dropout(dropout),
-#     nn.LayerNorm(16),
-#     nn.ReLU(),
-#     nn.Linear(16, dim_out, bias=bias),
-#     nn.Dropout(dropout),
-#     nn.LayerNorm(dim_out),
-#     # nn.Sigmoid(),
-# )

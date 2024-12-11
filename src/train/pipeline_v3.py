@@ -47,10 +47,6 @@ def iterative_forecast_v3(
         preds = model.predict(current_sequence)[-1,:]
 
         preds.append([preds[0], preds[1]])
-
-        # seq[seq_len+k] = np.concatenate((seq[k+seq_len][:dim_in - dim_out + 2], y_pred[:-2]), axis=None)
-        
-        # current_sequence = seq[k+1:k+1+seq_len].reshape(1, seq_len, dim_in)
     return preds
 
 
